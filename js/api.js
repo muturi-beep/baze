@@ -1,4 +1,4 @@
-const BASE_URL = "https://baze-api.onrender.com/v1";
+const BASE_URL = "https://baze-ten.vercel.app//v1";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

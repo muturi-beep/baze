@@ -110,8 +110,8 @@ router.post("/verify-otp", async (req, res) => {
     // Set HTTP-only cookie
     res.cookie("sessionToken", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: true, // <--- MUST be true for Vercel
+      sameSite: "none", // <--- MUST be "none" for cross-domain
       expires: expiresAt,
     });
 
