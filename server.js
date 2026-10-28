@@ -27,6 +27,9 @@ app.use("/v1/claims", claimsRoutes);
 app.use("/v1/votes", voteRoutes);
 app.use("/v1/leaderboard", leaderboardRoutes);
 
+app.get("/", (req, res) => {
+  res.json({ message: "Baze API is running perfectly." });
+});
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 // --- VERCEL SERVERLESS DATABASE CONNECTION CACHING ---
