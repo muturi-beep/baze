@@ -56,7 +56,16 @@ export function HomeView() {
         { class: "topbar" },
         h("button", { "aria-label": "menu" }, "☰"),
         h("span", { class: "brand" }, "BAZE"),
-        h("a", { href: "#/me", "aria-label": "profile" }, "👤"),
+        // --- FIXED DYNAMIC PROFILE ICON ---
+        h(
+          "a",
+          {
+            href: s.user.verified ? "#/me" : "#/login",
+            "aria-label": "profile",
+            class: "topbar-avatar",
+          },
+          s.user.verified ? s.user.name.charAt(0).toUpperCase() : "👤",
+        ),
       ),
     );
 

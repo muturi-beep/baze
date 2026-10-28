@@ -4,8 +4,8 @@ import {
   getState,
   getBoard,
   getGenre,
-  verifyUser,
   resetDemo,
+  logoutUser,
 } from "../store.js";
 import { bottomNav, emptyState, showToast } from "../components.js";
 
@@ -21,7 +21,6 @@ export function MeView() {
     var used = s.cycle.fanVoteBudget - s.user.votesRemaining;
     var pct = (used / s.cycle.fanVoteBudget) * 100;
 
-    // favorite genre = most common genre among voted tracks
     var genreCounts = {};
     yourVotes.forEach(function (v) {
       var g = v.track.genre;
@@ -32,7 +31,6 @@ export function MeView() {
     })[0];
     var favGenre = favGenreId ? getGenre(favGenreId) : null;
 
-    // top pick = highest-ranked voted track
     var topPick =
       yourVotes.length > 0
         ? yourVotes.slice().sort(function (a, b) {
@@ -59,19 +57,19 @@ export function MeView() {
         h(
           "div",
           { class: "me-avatar", "aria-hidden": "true" },
-          s.user.verified ? "🎤" : "👤",
+          s.user.verified ? s.user.name.charAt(0).toUpperCase() : "👤",
         ),
         h("h2", { class: "me-name" }, s.user.name),
         s.user.verified
           ? h("span", { class: "me-badge verified-badge" }, "✓ Verified voter")
           : h(
-              "button",
+              "a",
               {
                 class: "me-badge unverified-badge",
-                type: "button",
-                onClick: handleVerify,
+                href: "#/login",
+                style: { textDecoration: "none" },
               },
-              "Tap to verify",
+              "Log in to vote",
             ),
       ),
     );
@@ -157,14 +155,24 @@ export function MeView() {
         settingsItem("❓", "Help & support", function () {
           showToast("Support coming soon");
         }),
+        s.user.verified
+          ? settingsItem(
+              "🚪",
+              "Log out",
+              async function () {
+                await logoutUser();
+                showToast("Logged out");
+                location.hash = "#/";
+              },
+              true,
+            )
+          : null,
         settingsItem(
           "🗑",
           "Reset demo",
           function () {
             if (
-              confirm(
-                "Reset all demo data? Votes, verification, and claims will be cleared.",
-              )
+              confirm("Reset all demo data? Votes and claims will be cleared.")
             ) {
               resetDemo();
               showToast("Demo reset");
@@ -200,12 +208,6 @@ export function MeView() {
       h("span", { class: "me-setting-label" }, label),
       h("span", { class: "me-setting-arrow" }, "→"),
     );
-  }
-
-  async function handleVerify() {
-    await verifyUser();
-    render();
-    showToast("You're verified!");
   }
 
   var unsub = subscribe(render);

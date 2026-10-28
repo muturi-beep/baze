@@ -13,6 +13,8 @@ import {
   trackById,
 } from "./data.js";
 
+import { api } from "./api.js";
+
 var STORAGE_KEY = "baze.state.v1";
 
 var originalClaimed = {};
@@ -160,54 +162,100 @@ export function getBoard(cycleId) {
   });
 }
 
-export function verifyUser() {
-  return new Promise(function (resolve) {
-    setTimeout(function () {
-      update({ user: Object.assign({}, state.user, { verified: true }) });
-      resolve();
-    }, 400);
-  });
+export async function syncLeaderboard() {
+  try {
+    const data = await api.getLeaderboard();
+    const cycleId = CYCLE.id;
+    var board = state.leaderboard[cycleId] || [];
+
+    // Merge real DB counts with static seed votes
+    var merged = board.map(function (e) {
+      var dbVotes = data.counts[e.trackId] || 0;
+      var seedVotes = SEED_VOTES[e.trackId] || 0;
+
+      return Object.assign({}, e, {
+        // DB votes added on top of seed votes
+        votes: seedVotes + dbVotes,
+        votedByMe: data.myVotes.includes(e.trackId),
+        previousRank: null, // Reset previous rank on load
+      });
+    });
+
+    var nextBoard = assignRanks(merged);
+    var lb = Object.assign({}, state.leaderboard);
+    lb[cycleId] = nextBoard;
+
+    update({
+      leaderboard: lb,
+      user: Object.assign({}, state.user, {
+        votesRemaining: data.votesRemaining,
+      }),
+    });
+  } catch (err) {
+    console.error("Failed to sync leaderboard", err);
+  }
 }
 
-export function castVote(cycleId, trackId) {
-  return new Promise(function (resolve, reject) {
-    var board = state.leaderboard[cycleId] || [];
-    var current = board.find(function (e) {
-      return e.trackId === trackId;
-    });
-    if (!current) return reject({ code: "TRACK_NOT_IN_CYCLE" });
-    if (current.votedByMe) return reject({ code: "ALREADY_VOTED" });
-    if (state.user.votesRemaining <= 0)
-      return reject({ code: "NO_VOTES_LEFT" });
+export async function loginUser(identifier, code, channel) {
+  const data = await api.verifyOtp(identifier, code, channel);
 
-    setTimeout(function () {
-      var bumped = board.map(function (e) {
-        return e.trackId === trackId
-          ? Object.assign({}, e, {
-              votes: e.votes + 1,
-              votedByMe: true,
-              previousRank: e.rank,
-            })
-          : e;
-      });
-      var nextBoard = assignRanks(bumped);
-      var toRank = nextBoard.find(function (e) {
-        return e.trackId === trackId;
-      }).rank;
-      var lb = Object.assign({}, state.leaderboard);
-      lb[cycleId] = nextBoard;
-      update({
-        leaderboard: lb,
-        user: Object.assign({}, state.user, {
-          votesRemaining: state.user.votesRemaining - 1,
-        }),
-      });
-      resolve({
-        rank: toRank,
-        budgetUsed: CYCLE.fanVoteBudget - state.user.votesRemaining,
-      });
-    }, 350);
+  // Update the local state with the real user from MongoDB
+  update({
+    user: {
+      ...state.user,
+      id: data.user._id,
+      name: data.user.displayName,
+      verified: true,
+      roles: data.user.roles,
+      votesRemaining: data.user.votesRemaining,
+    },
   });
+  return data.user;
+}
+
+export async function checkAuth() {
+  try {
+    const data = await api.getMe();
+    update({
+      user: {
+        ...state.user,
+        id: data.user._id,
+        name: data.user.displayName,
+        verified: true,
+        roles: data.user.roles,
+        votesRemaining: data.user.votesRemaining,
+      },
+    });
+  } catch (err) {
+    console.log("No active session, loading as guest");
+  } finally {
+    // ALWAYS sync the leaderboard, logged in or not
+    await syncLeaderboard();
+  }
+}
+
+export async function castVote(cycleId, trackId) {
+  const idempotencyKey = crypto.randomUUID();
+  const track = trackById[trackId]; // Get the track to find the artist
+  const artistId = track ? track.artistId : null;
+
+  try {
+    // Pass artistId to the API
+    const res = await api.castVote(cycleId, trackId, artistId, idempotencyKey);
+
+    // ... rest of the function stays exactly the same
+  } catch (err) {
+    if (err.message.includes("already voted")) {
+      throw { code: "ALREADY_VOTED" };
+    }
+    if (err.message.includes("own track")) {
+      throw { code: "CANNOT_VOTE_FOR_SELF" };
+    }
+    if (err.message.includes("used all your votes")) {
+      throw { code: "NO_VOTES_LEFT" };
+    }
+    throw { code: "UNKNOWN" };
+  }
 }
 
 // ---- genres ----
@@ -401,27 +449,66 @@ export function searchArtists(query) {
   });
 }
 
-export function claimArtist(artistId, profile) {
+export async function logoutUser() {
+  try {
+    await api.logout();
+  } catch (err) {
+    console.error("Logout failed on backend", err);
+  }
+
+  // Reset local state to Guest
+  update({
+    user: {
+      id: "usr_guest",
+      name: "Guest",
+      verified: false,
+      votesRemaining: CYCLE.fanVoteBudget,
+      roles: ["fan"],
+    },
+    claimedArtistId: null,
+  });
+
+  // Optionally force a sync to clear out votedByMe states
+  await syncLeaderboard();
+}
+
+export async function claimArtist(artistId, profile) {
   if (state.claimedArtistId) return null;
   var artist = artistById[artistId];
   if (!artist) return null;
-  if (artist.claimed) return null;
 
-  var profileData = {
-    claimed: true,
-    bio: profile.bio || "",
-    links: profile.links || {},
-    photoUrl: profile.photoUrl || "",
-  };
+  try {
+    // Call the backend
+    const data = await api.claimArtist(artistId, artist.name);
 
-  state.artistProfiles[artistId] = profileData;
-  state.claimedArtistId = artistId;
-  Object.assign(artist, profileData);
-  persist();
-  listeners.forEach(function (fn) {
-    fn(state);
-  });
-  return artist;
+    var profileData = {
+      claimed: true,
+      bio: profile.bio || "",
+      links: profile.links || {},
+      photoUrl: profile.photoUrl || "",
+    };
+
+    state.artistProfiles[artistId] = profileData;
+    state.claimedArtistId = artistId;
+    Object.assign(artist, profileData);
+
+    // Update local user state to reflect new roles
+    update({
+      user: {
+        ...state.user,
+        roles: data.user.roles,
+        name: data.user.displayName,
+        claimedArtistId: data.user.claimedArtistId,
+      },
+      artistProfiles: state.artistProfiles,
+      claimedArtistId: state.claimedArtistId,
+    });
+
+    return artist;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }
 
 export function getClaimedArtistId() {

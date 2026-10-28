@@ -1,24 +1,14 @@
 import { h } from "../dom.js";
-import {
-  subscribe,
-  getState,
-  getTrack,
-  getBoard,
-  verifyUser,
-  castVote,
-} from "../store.js";
-import { voteButton, rankDelta, showToast, authSheet } from "../components.js";
+import { subscribe, getState, getTrack, getBoard, castVote } from "../store.js";
+import { voteButton, rankDelta, showToast } from "../components.js";
 import { formatDuration, formatRemaining } from "../format.js";
 
 export function TrackView(params) {
   var trackId = params.trackId;
   var el = h("main", { class: "screen track-page" });
   var voteState = "idle";
-  var authOpen = false;
-  var verifying = false;
   var rankBefore = null;
   var rankAfter = null;
-  var authSheetEl = null;
 
   function render() {
     var s = getState();
@@ -56,11 +46,17 @@ export function TrackView(params) {
         h("button", { "aria-label": "more options" }, "⋯"),
       ),
     );
+
+    // 1. The Image
     el.appendChild(
       h("img", { src: track.artworkUrl, alt: "", class: "artwork" }),
     );
-    el.appendChild(h("h1", { class: "track-title" }, track.title));
-    el.appendChild(
+
+    // 2. Wrap all details in a container to fix the desktop grid spacing
+    var details = h("div", { class: "track-details" });
+
+    details.appendChild(h("h1", { class: "track-title" }, track.title));
+    details.appendChild(
       h(
         "p",
         { class: "track-artist" },
@@ -71,7 +67,6 @@ export function TrackView(params) {
       ),
     );
 
-    // album + producer meta lines
     var metaItems = [];
     if (track.album) {
       metaItems.push(
@@ -81,7 +76,7 @@ export function TrackView(params) {
     metaItems.push(track.year);
     metaItems.push(formatDuration(track.durationSec));
 
-    el.appendChild(
+    details.appendChild(
       h(
         "p",
         { class: "track-meta" },
@@ -99,17 +94,46 @@ export function TrackView(params) {
         if (i > 0) producerNodes.push(", ");
         producerNodes.push(h("a", { href: "#/producer/" + p.id }, p.name));
       });
-      el.appendChild(h("p", { class: "track-producers" }, producerNodes));
+      details.appendChild(h("p", { class: "track-producers" }, producerNodes));
     }
 
-    el.appendChild(
-      voteButton({
-        state: voteState,
-        budgetUsed: budgetUsed,
-        budgetTotal: s.cycle.fanVoteBudget,
-        onVote: handleVote,
-      }),
-    );
+    // --- CHECK IF USER OWNS THE TRACK ---
+    var isOwnTrack =
+      s.user.claimedArtistId && s.user.claimedArtistId === track.artistId;
+
+    if (isOwnTrack) {
+      details.appendChild(
+        h(
+          "div",
+          { class: "vote-wrap", style: { margin: "24px 0" } },
+          h(
+            "div",
+            {
+              class: "badge",
+              style: {
+                background: "var(--bg-elev)",
+                color: "var(--text-muted)",
+                border: "1px solid var(--border)",
+                padding: "12px",
+                display: "block",
+                textAlign: "center",
+              },
+            },
+            "🎤 You cannot vote for your own track",
+          ),
+        ),
+      );
+    } else {
+      details.appendChild(
+        voteButton({
+          state: voteState,
+          budgetUsed: budgetUsed,
+          budgetTotal: s.cycle.fanVoteBudget,
+          onVote: handleVote,
+        }),
+      );
+    }
+    // -------------------------------------------
 
     var rankChildren = [
       "Rank ",
@@ -119,11 +143,11 @@ export function TrackView(params) {
     if (rankBefore != null && rankAfter != null && rankBefore !== rankAfter) {
       rankChildren.push(" · ", rankDelta(rankBefore, rankAfter));
     }
-    el.appendChild(
+    details.appendChild(
       h("div", { class: "rank-line", "aria-live": "polite" }, rankChildren),
     );
 
-    el.appendChild(
+    details.appendChild(
       h(
         "ul",
         { class: "tags" },
@@ -133,7 +157,7 @@ export function TrackView(params) {
       ),
     );
 
-    el.appendChild(
+    details.appendChild(
       h(
         "div",
         { class: "actions" },
@@ -150,29 +174,19 @@ export function TrackView(params) {
       ),
     );
 
-    if (authOpen) {
-      authSheetEl = authSheet({
-        pending: verifying,
-        onClose: function () {
-          authOpen = false;
-          render();
-        },
-        onVerify: handleVerify,
-      });
-      document.body.appendChild(authSheetEl);
-    } else if (authSheetEl && authSheetEl.parentNode) {
-      authSheetEl.parentNode.removeChild(authSheetEl);
-      authSheetEl = null;
-    }
+    // 3. Append the wrapped details block to the main view
+    el.appendChild(details);
   }
 
   function handleVote() {
     var s = getState();
+
+    // If not verified, send to the real login page
     if (!s.user.verified) {
-      authOpen = true;
-      render();
+      location.hash = "#/login";
       return;
     }
+
     var entry = getBoard(s.cycle.id).find(function (e) {
       return e.trackId === trackId;
     });
@@ -180,6 +194,7 @@ export function TrackView(params) {
     rankAfter = null;
     voteState = "voting";
     render();
+
     castVote(s.cycle.id, trackId)
       .then(function (res) {
         voteState = "voted";
@@ -196,19 +211,17 @@ export function TrackView(params) {
         }
       })
       .catch(function (err) {
-        voteState = err && err.code === "ALREADY_VOTED" ? "voted" : "error";
+        // Handle the self-vote error just in case the backend catches it
+        if (err && err.code === "CANNOT_VOTE_FOR_SELF") {
+          showToast("You cannot vote for your own track");
+          voteState = "idle";
+        } else if (err && err.code === "ALREADY_VOTED") {
+          voteState = "voted";
+        } else {
+          voteState = "error";
+        }
         render();
       });
-  }
-
-  function handleVerify() {
-    verifying = true;
-    render();
-    verifyUser().then(function () {
-      authOpen = false;
-      verifying = false;
-      handleVote();
-    });
   }
 
   function handleShare() {
@@ -226,12 +239,5 @@ export function TrackView(params) {
 
   var unsub = subscribe(render);
   render();
-  return {
-    el: el,
-    destroy: function () {
-      unsub();
-      if (authSheetEl && authSheetEl.parentNode)
-        authSheetEl.parentNode.removeChild(authSheetEl);
-    },
-  };
+  return { el: el, destroy: unsub };
 }

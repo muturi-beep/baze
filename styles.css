@@ -556,6 +556,59 @@ h2 {
 }
 
 /* ==========================================================================
+   Track Page Layout (Base / Mobile)
+   ========================================================================== */
+.track-page {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+.track-page .artwork {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1;
+  border-radius: 16px;
+  object-fit: cover;
+  margin: 0 auto 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.track-page .track-title {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0 0 8px;
+  line-height: 1.1;
+}
+.track-page .track-artist {
+  font-size: 16px;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+.track-page .track-meta,
+.track-page .track-producers {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.track-page .vote-wrap {
+  margin: 24px 0;
+}
+.track-page .rank-line {
+  text-align: center;
+  font-size: 15px;
+  margin-bottom: 24px;
+}
+.track-page .tags {
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.track-page .actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+/* ==========================================================================
    genre chips
    ========================================================================== */
 .genre-chips {
@@ -582,8 +635,8 @@ h2 {
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 500;
-  font-family: inherit; /* ← add */
-  cursor: pointer; /* ← add */
+  font-family: inherit;
+  cursor: pointer;
   white-space: nowrap;
   transition:
     background var(--motion-fast) ease-out,
@@ -611,7 +664,6 @@ h2 {
 .claim-screen {
   padding-bottom: 32px;
 }
-
 .claim-steps {
   display: flex;
   justify-content: center;
@@ -645,7 +697,6 @@ h2 {
   color: #0b0b0f;
   border-color: var(--success);
 }
-
 .claim-step-body {
   padding-top: var(--sp-2);
 }
@@ -655,7 +706,6 @@ h2 {
   margin: 0 0 var(--sp-4);
   line-height: 1.5;
 }
-
 .claim-search {
   width: 100%;
   min-height: var(--tap);
@@ -672,7 +722,6 @@ h2 {
   outline: none;
   border-color: var(--accent);
 }
-
 .claim-list {
   margin-bottom: var(--sp-4);
 }
@@ -682,7 +731,6 @@ h2 {
 .claim-list li:last-child {
   border-bottom: 0;
 }
-
 .claim-row {
   display: flex;
   align-items: center;
@@ -717,14 +765,12 @@ h2 {
 .claim-arrow {
   color: var(--text-muted);
 }
-
 .claim-empty {
   padding: var(--sp-6) 0;
   text-align: center;
   color: var(--text-muted);
   font-size: 14px;
 }
-
 .claim-hint {
   text-align: center;
   margin-top: var(--sp-4);
@@ -733,7 +779,6 @@ h2 {
   margin: 0 0 var(--sp-2);
   font-size: 13px;
 }
-
 .claim-artist-preview {
   background: var(--bg-elev);
   border: 1px solid var(--border);
@@ -754,7 +799,6 @@ h2 {
   font-size: 20px;
   font-weight: 700;
 }
-
 .claim-option {
   display: flex;
   align-items: center;
@@ -792,7 +836,6 @@ h2 {
   color: var(--text-muted);
   font-size: 12px;
 }
-
 .claim-disclaimer {
   color: var(--text-muted);
   font-size: 12px;
@@ -800,7 +843,6 @@ h2 {
   margin-top: var(--sp-4);
   font-style: italic;
 }
-
 .claim-field {
   display: flex;
   flex-direction: column;
@@ -840,7 +882,6 @@ textarea.claim-input {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 .claim-primary {
   display: block;
   width: 100%;
@@ -862,7 +903,6 @@ textarea.claim-input {
 .claim-primary:hover {
   filter: brightness(1.1);
 }
-
 .claim-secondary {
   display: block;
   width: 100%;
@@ -882,7 +922,6 @@ textarea.claim-input {
 .claim-secondary:hover {
   border-color: var(--text-muted);
 }
-
 .claim-success {
   text-align: center;
   padding-top: var(--sp-6);
@@ -959,7 +998,6 @@ textarea.claim-input {
   font-size: 13px;
   margin: 0 0 var(--sp-4);
 }
-
 .album-row {
   display: flex;
   gap: var(--sp-3);
@@ -999,7 +1037,6 @@ textarea.claim-input {
   font-variant-numeric: tabular-nums;
   margin-top: 2px;
 }
-
 .producer-list {
   padding: 0;
   margin: 0;
@@ -1034,7 +1071,6 @@ textarea.claim-input {
   font-variant-numeric: tabular-nums;
 }
 
-/* albums grid page */
 .album-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1091,7 +1127,6 @@ textarea.claim-input {
   margin-top: 2px;
 }
 
-/* album detail hero */
 .album-hero {
   text-align: center;
   padding: 0 var(--sp-4) var(--sp-5);
@@ -1129,7 +1164,6 @@ textarea.claim-input {
   margin: var(--sp-5) 0 var(--sp-3);
 }
 
-/* producer board page */
 .producer-board {
   padding: 0;
   margin: 0;
@@ -1164,7 +1198,6 @@ textarea.claim-input {
   font-variant-numeric: tabular-nums;
 }
 
-/* producer / artist hero */
 .producer-hero {
   text-align: center;
   padding: var(--sp-5) var(--sp-4);
@@ -1191,7 +1224,6 @@ textarea.claim-input {
   margin: var(--sp-2) 0;
 }
 
-/* track page album/producer lines */
 .track-producers {
   color: var(--text-muted);
   font-size: 13px;
@@ -1205,28 +1237,6 @@ textarea.claim-input {
 }
 .track-artist a {
   color: inherit;
-}
-
-/* desktop: albums grid grows */
-@media (min-width: 900px) {
-  .album-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: var(--sp-4);
-  }
-  .album-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--sp-4);
-    overflow-x: visible;
-  }
-  .album-card {
-    flex: none;
-  }
-  .album-card img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1;
-  }
 }
 
 /* ==========================================================================
@@ -1270,7 +1280,6 @@ textarea.claim-input {
   color: var(--accent);
   cursor: pointer;
 }
-
 .me-budget {
   background: var(--bg-elev);
   border: 1px solid var(--border);
@@ -1288,7 +1297,6 @@ textarea.claim-input {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
-
 .me-stats {
   background: var(--bg-elev);
   border: 1px solid var(--border);
@@ -1316,7 +1324,6 @@ textarea.claim-input {
   color: var(--text);
   line-height: 1.4;
 }
-
 .me-cta {
   display: block;
   width: 100%;
@@ -1333,7 +1340,6 @@ textarea.claim-input {
 .me-cta:hover {
   border-color: var(--accent);
 }
-
 .me-settings {
   margin-top: var(--sp-5);
 }
@@ -1381,510 +1387,6 @@ textarea.claim-input {
 }
 
 /* ==========================================================================
-   claim flow
-   ========================================================================== */
-.claim-screen {
-  padding-bottom: 32px;
-}
-
-.claim-steps {
-  display: flex;
-  justify-content: center;
-  gap: var(--sp-3);
-  padding: var(--sp-3) 0 var(--sp-4);
-}
-.claim-step {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  transition:
-    background var(--motion) ease-out,
-    color var(--motion) ease-out;
-}
-.claim-step.active {
-  background: var(--accent);
-  color: #0b0b0f;
-  border-color: var(--accent);
-}
-.claim-step.complete {
-  background: var(--success);
-  color: #0b0b0f;
-  border-color: var(--success);
-}
-
-.claim-step-body {
-  padding-top: var(--sp-2);
-}
-.claim-intro {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin: 0 0 var(--sp-4);
-  line-height: 1.5;
-}
-
-.claim-search {
-  width: 100%;
-  min-height: var(--tap);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  padding: 0 var(--sp-4);
-  color: var(--text);
-  font-size: 15px;
-  font-family: inherit;
-  margin-bottom: var(--sp-3);
-}
-.claim-search:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.claim-list {
-  margin-bottom: var(--sp-4);
-}
-.claim-list li {
-  border-bottom: 1px solid var(--border);
-}
-.claim-list li:last-child {
-  border-bottom: 0;
-}
-
-.claim-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  width: 100%;
-  background: none;
-  border: 0;
-  padding: var(--sp-4) var(--sp-2);
-  color: var(--text);
-  font-family: inherit;
-  text-align: left;
-  min-height: var(--tap);
-  cursor: pointer;
-}
-.claim-row:hover .claim-name {
-  color: var(--accent);
-}
-.claim-row-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.claim-name {
-  font-weight: 600;
-  font-size: 15px;
-}
-.claim-sub {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-.claim-arrow {
-  color: var(--text-muted);
-}
-
-.claim-empty {
-  padding: var(--sp-6) 0;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.claim-hint {
-  text-align: center;
-  margin-top: var(--sp-4);
-}
-.claim-hint .muted {
-  margin: 0 0 var(--sp-2);
-  font-size: 13px;
-}
-
-.claim-artist-preview {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  padding: var(--sp-4);
-  text-align: center;
-  margin-bottom: var(--sp-4);
-}
-.claim-preview-label {
-  display: block;
-  color: var(--text-muted);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: var(--sp-1);
-}
-.claim-preview-name {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.claim-option {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  width: 100%;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  padding: var(--sp-4);
-  margin-bottom: var(--sp-2);
-  color: var(--text);
-  text-align: left;
-  font-family: inherit;
-  cursor: pointer;
-  min-height: var(--tap);
-  transition: border-color var(--motion-fast) ease-out;
-}
-.claim-option:hover {
-  border-color: var(--accent);
-}
-.claim-option-icon {
-  font-size: 24px;
-  flex-shrink: 0;
-}
-.claim-option-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.claim-option-title {
-  font-weight: 600;
-  font-size: 14px;
-}
-.claim-option-sub {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.claim-disclaimer {
-  color: var(--text-muted);
-  font-size: 12px;
-  text-align: center;
-  margin-top: var(--sp-4);
-  font-style: italic;
-}
-
-.claim-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-4);
-}
-.claim-field-label {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.claim-field-hint {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-.claim-input {
-  width: 100%;
-  min-height: var(--tap);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: var(--sp-3);
-  color: var(--text);
-  font-size: 15px;
-  font-family: inherit;
-}
-.claim-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-textarea.claim-input {
-  resize: vertical;
-  min-height: 80px;
-}
-.claim-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.claim-primary {
-  display: block;
-  width: 100%;
-  min-height: 56px;
-  margin-top: var(--sp-3);
-  background: var(--accent);
-  border: 0;
-  border-radius: var(--r-pill);
-  color: #0b0b0f;
-  font-size: 16px;
-  font-weight: 700;
-  font-family: inherit;
-  text-align: center;
-  text-decoration: none;
-  line-height: 56px;
-  cursor: pointer;
-  transition: filter var(--motion-fast) ease-out;
-}
-.claim-primary:hover {
-  filter: brightness(1.1);
-}
-
-.claim-secondary {
-  display: block;
-  width: 100%;
-  min-height: var(--tap);
-  margin-top: var(--sp-2);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  color: var(--text);
-  font-size: 14px;
-  font-family: inherit;
-  text-align: center;
-  text-decoration: none;
-  line-height: var(--tap);
-  cursor: pointer;
-}
-.claim-secondary:hover {
-  border-color: var(--text-muted);
-}
-
-.claim-success {
-  text-align: center;
-  padding-top: var(--sp-6);
-}
-.claim-success-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: rgba(61, 220, 132, 0.15);
-  color: var(--success);
-  font-size: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto var(--sp-4);
-}
-.claim-success h2 {
-  font-size: 22px;
-  margin: 0 0 var(--sp-3);
-}
-.claim-success .muted {
-  font-size: 14px;
-  margin: var(--sp-2) 0;
-}
-.claim-success .claim-artist-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--accent);
-  margin: var(--sp-2) 0 var(--sp-4);
-}
-.claim-success .claim-primary {
-  margin-top: var(--sp-5);
-}
-
-/* ==========================================================================
-   ranking explained
-   ========================================================================== */
-.ranking-explained {
-  max-width: 640px;
-}
-.ranking-intro {
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--text);
-  padding: var(--sp-4);
-  background: var(--bg-elev);
-  border-radius: var(--r-card);
-  margin: 0 0 var(--sp-5);
-}
-.ranking-section {
-  margin-bottom: var(--sp-5);
-}
-.ranking-section h2 {
-  font-size: 16px;
-  margin-bottom: var(--sp-2);
-  color: var(--accent);
-}
-.ranking-section p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-muted);
-  margin: 0;
-}
-.ranking-footer {
-  margin-top: var(--sp-6);
-  padding-top: var(--sp-4);
-  border-top: 1px solid var(--border);
-}
-
-/* ==========================================================================
-   RESPONSIVE — tablet
-   ========================================================================== */
-@media (min-width: 600px) and (max-width: 899px) {
-  .app-shell,
-  .bottom-nav,
-  .sheet {
-    max-width: 600px;
-  }
-}
-
-/* ==========================================================================
-   RESPONSIVE — desktop (sidebar layout)
-   ========================================================================== */
-@media (min-width: 900px) {
-  .app-shell {
-    padding-left: 240px;
-    padding-bottom: 0;
-    max-width: none;
-  }
-  .screen {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 32px 40px;
-  }
-
-  h1 {
-    font-size: 28px;
-  }
-  h2 {
-    font-size: 18px;
-  }
-  .track-title {
-    font-size: 32px;
-  }
-  .brand {
-    font-size: 18px;
-  }
-
-  .bottom-nav {
-    position: fixed;
-    inset: 0 auto 0 0;
-    width: 240px;
-    max-width: none;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 20px 12px;
-    gap: 4px;
-    border-top: none;
-    border-right: 1px solid var(--border);
-  }
-  .bottom-nav::before {
-    content: "BAZE";
-    display: block;
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: 0.12em;
-    padding: 8px 12px 20px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-  }
-  .bottom-nav a {
-    display: flex;
-    justify-content: flex-start;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-    min-height: var(--tap);
-    transition:
-      background var(--motion-fast) ease-out,
-      color var(--motion-fast) ease-out;
-  }
-  .bottom-nav a.active {
-    background: var(--bg-card);
-    color: var(--text);
-  }
-
-  .track-page {
-    display: grid;
-    grid-template-columns: 340px 1fr;
-    column-gap: 40px;
-    align-content: start;
-  }
-  .track-page .topbar {
-    grid-column: 1 / -1;
-  }
-  .track-page .artwork {
-    grid-column: 1;
-    grid-row: 2 / -1;
-    margin: 0;
-    align-self: start;
-    position: sticky;
-    top: 32px;
-  }
-  .track-page > :not(.topbar):not(.artwork) {
-    grid-column: 2;
-  }
-
-  .card-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--sp-4);
-    overflow-x: visible;
-    padding-bottom: 0;
-  }
-  .track-card {
-    flex: none;
-  }
-  .track-card img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1;
-  }
-
-  .row-link {
-    padding: var(--sp-4) 0;
-  }
-
-  .sheet-backdrop {
-    align-items: center;
-    padding: 20px;
-  }
-  .sheet {
-    max-width: 420px;
-    margin: 0 auto;
-    border-radius: var(--r-card);
-  }
-
-  .toast {
-    left: calc(240px + (100vw - 240px) / 2);
-    bottom: 40px;
-  }
-}
-
-@media (hover: hover) and (min-width: 900px) {
-  .bottom-nav a:hover {
-    background: var(--bg-card);
-    color: var(--text);
-  }
-  .track-card:hover .title {
-    color: var(--accent);
-  }
-  .vote-button:hover:not(:disabled) {
-    filter: brightness(1.1);
-  }
-  .tabs button:not(.active):hover {
-    border-color: var(--text-muted);
-    color: var(--text);
-  }
-  .see-all:hover {
-    text-decoration: underline;
-  }
-}
-
-/* ==========================================================================
    explore
    ========================================================================== */
 .explore-search-wrap {
@@ -1918,7 +1420,6 @@ textarea.claim-input {
   pointer-events: none;
   opacity: 0.6;
 }
-
 .explore-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1974,7 +1475,6 @@ textarea.claim-input {
   color: var(--success);
   font-size: 12px;
 }
-
 .claim-banner {
   display: flex;
   align-items: center;
@@ -2003,9 +1503,267 @@ textarea.claim-input {
   font-size: 13px;
 }
 
+/* ==========================================================================
+   login
+   ========================================================================== */
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+.login-hero {
+  text-align: center;
+  padding: var(--sp-6) 0 var(--sp-5);
+}
+.brand-large {
+  font-size: 32px;
+  letter-spacing: 0.15em;
+  margin-bottom: var(--sp-2);
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  max-width: 320px;
+  margin: 0 auto;
+  width: 100%;
+}
+.login-input {
+  width: 100%;
+  min-height: 56px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 0 var(--sp-4);
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  text-align: center;
+}
+.login-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.code-input {
+  font-size: 24px;
+  letter-spacing: 0.5em;
+  font-weight: 700;
+}
+.legal {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+  margin-top: var(--sp-4);
+}
+.topbar-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #0b0b0f;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ==========================================================================
+   RESPONSIVE — tablet
+   ========================================================================== */
+@media (min-width: 600px) and (max-width: 899px) {
+  .app-shell,
+  .bottom-nav,
+  .sheet {
+    max-width: 600px;
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE — desktop (sidebar layout)
+   ========================================================================== */
 @media (min-width: 900px) {
+  .app-shell {
+    padding-left: 240px;
+    padding-bottom: 0;
+    max-width: none;
+  }
+  .screen {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+  h2 {
+    font-size: 18px;
+  }
+  .brand {
+    font-size: 18px;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 240px;
+    max-width: none;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px 12px;
+    gap: 4px;
+    border-top: none;
+    border-right: 1px solid var(--border);
+  }
+  .bottom-nav::before {
+    content: "BAZE";
+    display: block;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    padding: 8px 12px 20px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .bottom-nav a {
+    display: flex;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    min-height: var(--tap);
+    transition:
+      background var(--motion-fast) ease-out,
+      color var(--motion-fast) ease-out;
+  }
+  .bottom-nav a.active {
+    background: var(--bg-card);
+    color: var(--text);
+  }
+
+  .card-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--sp-4);
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+  .track-card {
+    flex: none;
+  }
+  .track-card img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .row-link {
+    padding: var(--sp-4) 0;
+  }
+  .sheet-backdrop {
+    align-items: center;
+    padding: 20px;
+  }
+  .sheet {
+    max-width: 420px;
+    margin: 0 auto;
+    border-radius: var(--r-card);
+  }
+  .toast {
+    left: calc(240px + (100vw - 240px) / 2);
+    bottom: 40px;
+  }
+
+  /* ==========================================================================
+     DESKTOP TRACK PAGE OVERRIDE 
+     ========================================================================== */
+  .track-page {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    column-gap: 48px;
+    row-gap: 0;
+    max-width: 1000px;
+    padding: 40px;
+    align-items: start;
+    margin: 0 auto;
+  }
+  .track-page .topbar {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: 0;
+  }
+  .track-page .artwork {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: 100%;
+    margin: 0;
+    position: sticky;
+    top: 40px;
+  }
+  /* This is the magic fix for the text block */
+  .track-page .track-details {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 40px;
+  }
+
+  .track-page .rank-line,
+  .track-page .tags {
+    text-align: left;
+    justify-content: flex-start;
+  }
+  .track-page .track-title {
+    font-size: 32px;
+    margin-bottom: 4px;
+  }
+
+  /* Desktop grids */
+  .album-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--sp-4);
+  }
+  .album-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--sp-4);
+    overflow-x: visible;
+  }
+  .album-card {
+    flex: none;
+  }
+  .album-card img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
   .explore-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: var(--sp-4);
+  }
+}
+
+@media (hover: hover) and (min-width: 900px) {
+  .bottom-nav a:hover {
+    background: var(--bg-card);
+    color: var(--text);
+  }
+  .track-card:hover .title {
+    color: var(--accent);
+  }
+  .vote-button:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+  .tabs button:not(.active):hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+  }
+  .see-all:hover {
+    text-decoration: underline;
   }
 }

@@ -1,3 +1,4 @@
+import { checkAuth } from "./store.js";
 import { route, start } from "./router.js";
 import { HomeView } from "./views/home.js";
 import { TrackView } from "./views/track.js";
@@ -14,6 +15,7 @@ import { ArtistView } from "./views/artist.js";
 import { MeView } from "./views/me.js";
 import { ClaimView } from "./views/claim.js";
 import { RankingExplainedView } from "./views/rankingExplained.js";
+import { LoginView } from "./views/login.js";
 
 route("/", function () {
   return HomeView();
@@ -59,6 +61,12 @@ route("/claim", function () {
 });
 route("/ranking-explained", function () {
   return RankingExplainedView();
+});
+route("/login", function () {
+  return LoginView();
+});
+checkAuth().then(() => {
+  start(document.getElementById("app"));
 });
 
 start(document.getElementById("app"));
