@@ -1,5 +1,5 @@
 import { h } from "../dom.js";
-import { loginUser, getState } from "../store.js"; // Added getState here
+import { loginUser, getState } from "../store.js";
 import { showToast } from "../components.js";
 import { api } from "../api.js";
 
@@ -72,14 +72,19 @@ export function LoginView() {
       try {
         identifier = val;
         channel = "email";
-        await api.requestOtp(identifier, channel);
-        showToast("Check your terminal for the code!");
+
+        // FIX: Capture the response from the API
+        const response = await api.requestOtp(identifier, channel);
+
+        // FIX: Show the code on the screen!
+        showToast("Your OTP is: " + response.devCode);
+
         step = "otp";
         render();
       } catch (err) {
-        showToast(err.message);
+        showToast(err.message || "Failed to send code");
         loading = false;
-        submitBtn.textContent = "Continue";
+        submitBtn.textContent = "Continue with Email";
       }
     };
 
@@ -132,7 +137,7 @@ export function LoginView() {
         showToast("Welcome to Baze!");
         location.hash = "#/"; // Redirect home
       } catch (err) {
-        showToast(err.message);
+        showToast(err.message || "Invalid code");
         loading = false;
         submitBtn.textContent = "Verify Code";
         input.value = "";

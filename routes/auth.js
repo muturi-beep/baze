@@ -41,7 +41,8 @@ router.post("/request-otp", otpLimiter, async (req, res) => {
       expiresAt,
     });
 
-    res.json({ success: true, message: "OTP sent (check terminal)" });
+    // FIX: Send the code back to the frontend so we can see it on screen
+    res.json({ success: true, message: "OTP sent", devCode: code });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -107,11 +108,11 @@ router.post("/verify-otp", async (req, res) => {
       userAgent: req.headers["user-agent"],
     });
 
-    // Set HTTP-only cookie
+    // Set HTTP-only cookie (sameSite "lax" is correct for single-domain Vercel)
     res.cookie("sessionToken", token, {
       httpOnly: true,
-      secure: true, // <--- MUST be true for Vercel
-      sameSite: "lax", // <--- MUST be "none" for cross-domain
+      secure: true,
+      sameSite: "lax",
       expires: expiresAt,
     });
 
