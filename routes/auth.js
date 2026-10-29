@@ -111,7 +111,7 @@ router.post("/verify-otp", async (req, res) => {
     res.cookie("sessionToken", token, {
       httpOnly: true,
       secure: true, // <--- MUST be true for Vercel
-      sameSite: "none", // <--- MUST be "none" for cross-domain
+      sameSite: "lax", // <--- MUST be "none" for cross-domain
       expires: expiresAt,
     });
 
