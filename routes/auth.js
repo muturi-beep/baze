@@ -1,12 +1,16 @@
 import express from "express";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
+import { Resend } from "resend";
 import User from "../models/User.js";
 import Session from "../models/Session.js";
 import OtpCode from "../models/OtpCode.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// Initialize Resend (it will grab the key from Vercel Environment Variables)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Limit OTP requests to 3 per 15 minutes per IP
 const otpLimiter = rateLimit({
@@ -28,11 +32,6 @@ router.post("/request-otp", otpLimiter, async (req, res) => {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
-    // DEV MODE: Log it to the terminal
-    console.log(`\n==============================`);
-    console.log(`🔑 OTP for ${identifier}: ${code}`);
-    console.log(`==============================\n`);
-
     // Store hashed code in DB
     await OtpCode.create({
       identifier,
@@ -41,8 +40,30 @@ router.post("/request-otp", otpLimiter, async (req, res) => {
       expiresAt,
     });
 
-    // FIX: Send the code back to the frontend so we can see it on screen
-    res.json({ success: true, message: "OTP sent", devCode: code });
+    // Send the real email via Resend
+    const { data, error } = await resend.emails.send({
+      from: "Baze <onboarding@resend.dev>", // Use your Resend test address for now
+      to: identifier, // The email address the user entered
+      subject: "Your Baze Login Code",
+      html: `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>Welcome to Baze</h2>
+          <p>Your 6-digit login code is:</p>
+          <h1 style="color: #ff8a3d; letter-spacing: 5px;">${code}</h1>
+          <p>This code expires in 10 minutes.</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Resend Error:", error);
+      return res
+        .status(500)
+        .json({ error: "Failed to send email. Please try again." });
+    }
+
+    // Return success (no longer sending the devCode back!)
+    res.json({ success: true, message: "OTP sent to your email" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -108,7 +129,7 @@ router.post("/verify-otp", async (req, res) => {
       userAgent: req.headers["user-agent"],
     });
 
-    // Set HTTP-only cookie (sameSite "lax" is correct for single-domain Vercel)
+    // Set HTTP-only cookie
     res.cookie("sessionToken", token, {
       httpOnly: true,
       secure: true,

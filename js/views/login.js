@@ -73,11 +73,10 @@ export function LoginView() {
         identifier = val;
         channel = "email";
 
-        // FIX: Capture the response from the API
-        const response = await api.requestOtp(identifier, channel);
+        await api.requestOtp(identifier, channel);
 
-        // FIX: Show the code on the screen!
-        showToast("Your OTP is: " + response.devCode);
+        // Production message
+        showToast("Check your email for the code!");
 
         step = "otp";
         render();
