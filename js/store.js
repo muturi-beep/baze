@@ -80,6 +80,25 @@ function update(patch) {
   listeners.forEach((fn) => fn(state));
 }
 
+export function resetDemo() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {}
+
+  state.user = {
+    id: "usr_guest",
+    name: "Guest",
+    verified: false,
+    votesRemaining: CYCLE.fanVoteBudget,
+  };
+  state.claimedArtistId = null;
+  state.artistProfiles = {};
+
+  buildEmptyLeaderboard();
+  persist();
+  listeners.forEach((fn) => fn(state));
+}
+
 export async function syncCatalog() {
   try {
     const data = await api.getCatalog();
@@ -119,7 +138,6 @@ export function getTrack(id) {
   const t = catalog.trackById[id];
   if (!t) return null;
 
-  // Handle Mongoose populated objects
   return Object.assign({}, t, {
     id: t._id,
     artistId: t.artistId ? t.artistId._id || t.artistId : null,
@@ -328,7 +346,7 @@ export function getArtistTotals(cycleId, artistId) {
   return { trackCount: tracks.length, totalVotes, tracks };
 }
 
-// --- PRODUCERS (Stubs to prevent Vite build errors) ---
+// --- PRODUCERS (Stubs) ---
 export function getProducers() {
   return [];
 }
@@ -341,7 +359,6 @@ export function getProducerBoard(cycleId, genreId) {
 export function getProducerTracks(cycleId, producerId) {
   return [];
 }
-// -----------------------------------------------------
 
 export function searchArtists(query) {
   var q = (query || "").toLowerCase();
