@@ -43,25 +43,17 @@ app.use(async (req, res, next) => {
   }
 });
 
-app.use("/v1/auth", authRoutes);
-app.use("/v1/claims", claimsRoutes);
-app.use("/v1/votes", voteRoutes);
-app.use("/v1/leaderboard", leaderboardRoutes);
-app.use("/v1/catalog", catalogRoutes);
+// NO MORE /v1 PREFIX HERE
+app.use("/auth", authRoutes);
+app.use("/claims", claimsRoutes);
+app.use("/votes", voteRoutes);
+app.use("/leaderboard", leaderboardRoutes);
+app.use("/catalog", catalogRoutes);
 
-app.get("/", (req, res) =>
+app.get("/api", (req, res) =>
   res.json({ message: "Baze API is running perfectly." }),
 );
 
-// CRITICAL FIX: Only listen locally. NEVER listen on Vercel.
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 4001;
-  app.listen(PORT, () =>
-    console.log(`🚀 Local backend on http://localhost:${PORT}`),
-  );
-}
-
-// Global Error Handler to prevent Vercel FUNCTION_INVOCATION_FAILED
 app.use((err, req, res, next) => {
   console.error("🔥 Fatal Server Error:", err);
   res
@@ -69,7 +61,6 @@ app.use((err, req, res, next) => {
     .json({ error: "Internal server error", details: err.message });
 });
 
-// CRITICAL FIX: Only listen locally. NEVER listen on Vercel.
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 4001;
   app.listen(PORT, () =>
