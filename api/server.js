@@ -61,4 +61,20 @@ if (!process.env.VERCEL) {
   );
 }
 
+// Global Error Handler to prevent Vercel FUNCTION_INVOCATION_FAILED
+app.use((err, req, res, next) => {
+  console.error("🔥 Fatal Server Error:", err);
+  res
+    .status(500)
+    .json({ error: "Internal server error", details: err.message });
+});
+
+// CRITICAL FIX: Only listen locally. NEVER listen on Vercel.
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 4001;
+  app.listen(PORT, () =>
+    console.log(`🚀 Local backend on http://localhost:${PORT}`),
+  );
+}
+
 export default app;

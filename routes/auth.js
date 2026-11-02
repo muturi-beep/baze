@@ -10,7 +10,7 @@ import { requireAuth } from "../middleware/auth.js";
 const router = express.Router();
 
 // Initialize Resend (it will grab the key from Vercel Environment Variables)
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
 
 // Limit OTP requests to 3 per 15 minutes per IP
 const otpLimiter = rateLimit({
