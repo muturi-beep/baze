@@ -23,33 +23,41 @@ app.use(
   }),
 );
 
-let cachedConnection = null;
+// --- BULLETPROOF SERVERLESS DATABASE CONNECTION ---
 const connectDB = async () => {
-  if (cachedConnection) return cachedConnection;
-  cachedConnection = mongoose
-    .connect(process.env.MONGODB_URI)
-    .then((m) => {
-      console.log("✅ Connected to MongoDB Atlas");
-      return m;
-    })
-    .catch((err) => {
-      cachedConnection = null;
-      console.error("❌ MongoDB connection error:", err.message);
-      throw err;
-    });
-  return cachedConnection;
+  if (mongoose.connection.readyState === 1) {
+    return; // Already connected
+  }
+
+  if (!process.env.MONGODB_URI) {
+    console.error(
+      "❌ FATAL: MONGODB_URI is not defined in environment variables!",
+    );
+    throw new Error("Missing MONGODB_URI");
+  }
+
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log("✅ Connected to MongoDB Atlas");
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err.message);
+    throw err; // Throw to trigger the 500 error below
+  }
 };
 
+// Middleware to connect DB before EVERY API route
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (err) {
-    res.status(500).json({ error: "Database connection failed" });
+    res
+      .status(500)
+      .json({ error: "Database connection failed. Check Vercel logs." });
   }
 });
 
-// --- ROUTES ---
+// Routes
 app.use("/v1/auth", authRoutes);
 app.use("/v1/claims", claimsRoutes);
 app.use("/v1/votes", voteRoutes);
@@ -60,10 +68,9 @@ app.get("/", (req, res) =>
   res.json({ message: "Baze API is running perfectly." }),
 );
 
-// --- CATCH-ALL 404 ---
-app.use((req, res) => {
-  console.log(`404 Not Found: ${req.method} ${req.url}`);
-  res.status(404).json({ error: `Route not found: ${req.originalUrl}` });
+// Catch-all for undefined API routes
+app.use("/v1/*", (req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.originalUrl}` });
 });
 
 if (process.env.NODE_ENV !== "production") {
