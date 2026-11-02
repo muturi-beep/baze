@@ -7,7 +7,6 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    // Fetch all data and populate the references
     const tracks = await Track.find()
       .populate("artistId", "name imageUrl claimedBy")
       .populate("albumId", "title artworkUrl")

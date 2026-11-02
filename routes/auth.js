@@ -41,27 +41,31 @@ router.post("/request-otp", otpLimiter, async (req, res) => {
     });
 
     // Send the real email via Resend
-    const { data, error } = await resend.emails.send({
-      from: "Baze <onboarding@resend.dev>", // Use your Resend test address for now
-      to: identifier, // The email address the user entered
-      subject: "Your Baze Login Code",
-      html: `<p>Your 6-digit login code is: <strong>${code}</strong></p><p>This code expires in 10 minutes.</p>`,
-    });
+    try {
+      const { data, error } = await resend.emails.send({
+        from: "Baze <onboarding@resend.dev>", // Use your Resend test address for now
+        to: identifier, // The email address the user entered
+        subject: "Your Baze Login Code",
+        html: `<p>Your 6-digit login code is: <strong>${code}</strong></p><p>This code expires in 10 minutes.</p>`,
+      });
 
-    if (error) {
-      console.error("Resend Error:", error);
-
-      return res
-        .status(500)
-        .json({ error: error.message || "Failed to send email" });
-    }
-
+      if (error) {
+        console.error("Resend Error:", error);
+        return res
+          .status(500)
+          .json({ error: error.message || "Failed to send email" });
+      }
     } catch (emailErr) {
       console.error("Resend SDK Crash:", emailErr);
       return res.status(500).json({ error: "Email service unavailable" });
     }
 
     res.json({ success: true, message: "OTP sent to your email" });
+  } catch (err) {
+    console.error("Server Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 // 2. VERIFY OTP
 router.post("/verify-otp", async (req, res) => {

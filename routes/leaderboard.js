@@ -1,6 +1,5 @@
 import express from "express";
 import Vote from "../models/Vote.js";
-import User from "../models/User.js";
 import { optionalAuth } from "../middleware/optionalAuth.js";
 
 const router = express.Router();
@@ -34,11 +33,7 @@ router.get("/", optionalAuth, async (req, res) => {
       votesRemaining = req.user.votesRemaining;
     }
 
-    res.json({
-      counts,
-      myVotes,
-      votesRemaining,
-    });
+    res.json({ counts, myVotes, votesRemaining });
   } catch (err) {
     console.error("Leaderboard error:", err);
     res.status(500).json({ error: "Server error" });

@@ -63,8 +63,6 @@ app.get("/", (req, res) => {
   res.json({ message: "Baze API is running perfectly." });
 });
 
-app.get("/health", (req, res) => res.json({ status: "ok" }));
-
 // Only listen locally. Vercel handles the serverless routing.
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 4001;
