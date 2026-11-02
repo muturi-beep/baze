@@ -46,9 +46,19 @@ export function TrackView(params) {
     );
 
     // 1. The Image (use track.artworkUrl from DB)
-    var imageUrl =
-      track.artworkUrl || "https://via.placeholder.com/400?text=No+Artwork";
-    el.appendChild(h("img", { src: imageUrl, alt: "", class: "artwork" }));
+    var fallbackImg = "https://picsum.photos/seed/" + track.id + "/400";
+    var imageUrl = track.artworkUrl || fallbackImg;
+
+    el.appendChild(
+      h("img", {
+        src: imageUrl,
+        alt: "",
+        class: "artwork",
+        onError: function (e) {
+          e.target.src = fallbackImg;
+        }, // Fallback if URL is broken
+      }),
+    );
 
     // 2. Wrap all details
     var details = h("div", { class: "track-details" });

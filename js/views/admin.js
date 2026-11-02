@@ -7,7 +7,6 @@ export function AdminView() {
   const el = h("main", { class: "screen admin-screen" });
   const s = getState();
 
-  // Simple guard: only show if logged in
   if (!s.user.verified) {
     el.appendChild(
       h("div", { class: "empty" }, "You must be logged in to view this page."),
@@ -45,17 +44,17 @@ export function AdminView() {
       h("input", { name: "albumName", class: "claim-input" }),
     ),
     field(
-      "YouTube Video ID",
+      "YouTube Link or ID",
       h("input", {
         name: "youtubeVideoId",
         required: true,
         class: "claim-input",
-        placeholder: "e.g. dQw4w9WgXcQ",
+        placeholder: "Paste full link or ID",
       }),
       h(
         "span",
         { class: "claim-field-hint" },
-        "Find this in the YouTube URL after 'v='",
+        "We will extract the ID automatically",
       ),
     ),
     field(
@@ -95,11 +94,20 @@ export function AdminView() {
     btn.textContent = "Publishing...";
     btn.disabled = true;
 
+    // Smart YouTube ID extraction
+    let rawYt = form.youtubeVideoId.value.trim();
+    let ytId = rawYt;
+    if (rawYt.includes("v=")) {
+      ytId = rawYt.split("v=")[1].split("&")[0];
+    } else if (rawYt.includes("youtu.be/")) {
+      ytId = rawYt.split("youtu.be/")[1].split("?")[0];
+    }
+
     const data = {
       title: form.title.value,
       artistName: form.artistName.value,
       albumName: form.albumName.value,
-      youtubeVideoId: form.youtubeVideoId.value,
+      youtubeVideoId: ytId,
       genre: form.genre.value,
       artworkUrl: form.artworkUrl.value,
     };
@@ -109,7 +117,6 @@ export function AdminView() {
       showToast("Track published successfully!");
       form.reset();
 
-      // Refresh the catalog so the new track appears instantly
       await syncCatalog();
     } catch (err) {
       showToast(err.message || "Failed to publish track");
