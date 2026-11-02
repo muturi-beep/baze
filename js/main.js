@@ -1,3 +1,4 @@
+import { AdminView } from "./views/admin.js";
 import { checkAuth } from "./store.js";
 import { route, start } from "./router.js";
 import { HomeView } from "./views/home.js";
@@ -65,6 +66,7 @@ route("/ranking-explained", function () {
 route("/login", function () {
   return LoginView();
 });
+route("/admin", () => AdminView());
 checkAuth()
   .catch((err) => console.error("Auth check bypassed:", err))
   .finally(() => {

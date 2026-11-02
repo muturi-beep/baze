@@ -48,4 +48,11 @@ export const api = {
     }),
   getLeaderboard: () => request("/leaderboard"),
   getCatalog: () => request("/catalog"),
+
+  // NEW: Admin endpoint to add tracks
+  addTrack: (data) =>
+    request("/admin/add-track", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };

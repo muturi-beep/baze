@@ -1,3 +1,4 @@
+import adminRoutes from "./routes/admin.js";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -49,6 +50,7 @@ app.use("/v1/claims", claimsRoutes);
 app.use("/v1/votes", voteRoutes);
 app.use("/v1/leaderboard", leaderboardRoutes);
 app.use("/v1/catalog", catalogRoutes);
+app.use("/v1/admin", adminRoutes);
 
 app.get("/", (req, res) => res.json({ message: "Baze API is running." }));
 
