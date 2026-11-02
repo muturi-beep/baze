@@ -18,48 +18,43 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: true, credentials: true }));
 
-// --- CACHED DATABASE CONNECTION ---
 let isConnected = false;
-
 const connectDB = async () => {
   if (isConnected) return;
   if (!process.env.MONGODB_URI) {
-    throw new Error(
-      "MONGODB_URI is missing from Vercel Environment Variables!",
-    );
+    throw new Error("MONGODB_URI is missing in Vercel Environment Variables");
   }
-
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     isConnected = true;
     console.log("✅ MongoDB Connected");
   } catch (err) {
-    console.error("❌ MongoDB Error:", err.message);
-    throw new Error("Database connection failed: " + err.message);
+    console.error("❌ MongoDB Connection Error:", err.message);
+    throw err;
   }
 };
 
-// Middleware to ensure DB is connected
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (err) {
-    // If DB fails, send the exact error to the frontend
     res.status(500).json({ error: err.message });
   }
 });
 
-// Routes
 app.use("/v1/auth", authRoutes);
 app.use("/v1/claims", claimsRoutes);
 app.use("/v1/votes", voteRoutes);
 app.use("/v1/leaderboard", leaderboardRoutes);
 app.use("/v1/catalog", catalogRoutes);
 
-app.get("/", (req, res) => res.json({ message: "Baze API is running." }));
+app.get("/", (req, res) =>
+  res.json({ message: "Baze API is running perfectly." }),
+);
 
-if (process.env.NODE_ENV !== "production") {
+// CRITICAL FIX: Only listen locally. NEVER listen on Vercel.
+if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 4001;
   app.listen(PORT, () =>
     console.log(`🚀 Local backend on http://localhost:${PORT}`),
