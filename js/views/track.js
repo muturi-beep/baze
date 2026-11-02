@@ -13,8 +13,9 @@ export function TrackView(params) {
   function render() {
     var s = getState();
     var track = getTrack(trackId);
+
     if (!track) {
-      el.textContent = "Track not found";
+      el.innerHTML = "<p>Track not found.</p>";
       return;
     }
 
@@ -22,8 +23,10 @@ export function TrackView(params) {
       return e.trackId === trackId;
     });
     var voted = entry ? entry.votedByMe : false;
+
     if (voted && voteState !== "voted") voteState = "voted";
     if (!voted && voteState === "voted") voteState = "idle";
+
     var budgetUsed = s.cycle.fanVoteBudget - s.user.votesRemaining;
     var currentRank = rankAfter != null ? rankAfter : entry ? entry.rank : null;
 
@@ -35,46 +38,54 @@ export function TrackView(params) {
         { class: "topbar" },
         h(
           "button",
-          {
-            "aria-label": "back",
-            onClick: function () {
-              history.back();
-            },
-          },
+          { "aria-label": "back", onClick: () => history.back() },
           "←",
         ),
         h("button", { "aria-label": "more options" }, "⋯"),
       ),
     );
 
-    // 1. The Image
-    el.appendChild(
-      h("img", { src: track.artworkUrl, alt: "", class: "artwork" }),
-    );
+    // 1. The Image (use track.artworkUrl from DB)
+    var imageUrl =
+      track.artworkUrl || "https://via.placeholder.com/400?text=No+Artwork";
+    el.appendChild(h("img", { src: imageUrl, alt: "", class: "artwork" }));
 
-    // 2. Wrap all details in a container to fix the desktop grid spacing
+    // 2. Wrap all details
     var details = h("div", { class: "track-details" });
 
     details.appendChild(h("h1", { class: "track-title" }, track.title));
+
+    // Use real artist data
     details.appendChild(
       h(
         "p",
         { class: "track-artist" },
-        h("a", { href: "#/artist/" + track.artist.id }, track.artist.name),
-        track.artist.claimed
+        h(
+          "a",
+          { href: "#/artist/" + track.artistId },
+          track.artist ? track.artist.name : "Unknown Artist",
+        ),
+        track.artist && track.artist.claimedBy
           ? h("span", { class: "verified" }, "✓ claimed")
           : null,
       ),
     );
 
+    // Use real meta data
     var metaItems = [];
     if (track.album) {
       metaItems.push(
-        h("a", { href: "#/album/" + track.album.id }, track.album.title),
+        h("a", { href: "#/album/" + track.albumId }, track.album.title),
       );
     }
-    metaItems.push(track.year);
-    metaItems.push(formatDuration(track.durationSec));
+    if (track.releaseDate) metaItems.push(track.releaseDate.split("-")[0]);
+
+    // Format duration from ms to m:ss
+    if (track.durationMs) {
+      var mins = Math.floor(track.durationMs / 60000);
+      var secs = Math.floor((track.durationMs % 60000) / 1000);
+      metaItems.push(`${mins}:${secs.toString().padStart(2, "0")}`);
+    }
 
     details.appendChild(
       h(
@@ -88,16 +99,34 @@ export function TrackView(params) {
       ),
     );
 
-    if (track.producers && track.producers.length) {
-      var producerNodes = [h("span", { class: "muted" }, "Produced by ")];
-      track.producers.forEach(function (p, i) {
-        if (i > 0) producerNodes.push(", ");
-        producerNodes.push(h("a", { href: "#/producer/" + p.id }, p.name));
-      });
-      details.appendChild(h("p", { class: "track-producers" }, producerNodes));
+    // --- YOUTUBE EMBED PLAYER ---
+    if (track.youtubeVideoId) {
+      details.appendChild(
+        h(
+          "div",
+          {
+            class: "youtube-player",
+            style: {
+              margin: "24px 0",
+              borderRadius: "12px",
+              overflow: "hidden",
+            },
+          },
+          h("iframe", {
+            width: "100%",
+            height: "200",
+            src: `https://www.youtube.com/embed/${track.youtubeVideoId}`,
+            title: "YouTube video player",
+            frameborder: "0",
+            allow:
+              "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+            allowfullscreen: true,
+          }),
+        ),
+      );
     }
 
-    // --- CHECK IF USER OWNS THE TRACK ---
+    // --- VOTE BUTTON LOGIC ---
     var isOwnTrack =
       s.user.claimedArtistId && s.user.claimedArtistId === track.artistId;
 
@@ -133,8 +162,8 @@ export function TrackView(params) {
         }),
       );
     }
-    // -------------------------------------------
 
+    // --- RANK LINE ---
     var rankChildren = [
       "Rank ",
       h("strong", {}, "#" + (currentRank != null ? currentRank : "—")),
@@ -147,16 +176,18 @@ export function TrackView(params) {
       h("div", { class: "rank-line", "aria-live": "polite" }, rankChildren),
     );
 
+    // --- TAGS ---
     details.appendChild(
       h(
         "ul",
         { class: "tags" },
         h("li", {}, "🏙 " + s.cycle.city),
-        h("li", {}, "🎵 " + s.cycle.genre),
+        h("li", {}, "🎵 " + (track.genre || s.cycle.genre)),
         h("li", {}, "⏱ " + formatRemaining(s.cycle.endsAt)),
       ),
     );
 
+    // --- ACTIONS ---
     details.appendChild(
       h(
         "div",
@@ -165,7 +196,7 @@ export function TrackView(params) {
         h(
           "button",
           {
-            onClick: function () {
+            onClick: () => {
               location.hash = "#/report/" + track.id;
             },
           },
@@ -174,14 +205,11 @@ export function TrackView(params) {
       ),
     );
 
-    // 3. Append the wrapped details block to the main view
     el.appendChild(details);
   }
 
   function handleVote() {
     var s = getState();
-
-    // If not verified, send to the real login page
     if (!s.user.verified) {
       location.hash = "#/login";
       return;
@@ -211,7 +239,6 @@ export function TrackView(params) {
         }
       })
       .catch(function (err) {
-        // Handle the self-vote error just in case the backend catches it
         if (err && err.code === "CANNOT_VOTE_FOR_SELF") {
           showToast("You cannot vote for your own track");
           voteState = "idle";
@@ -230,7 +257,7 @@ export function TrackView(params) {
     if (navigator.share) {
       navigator
         .share({ url: url, title: track ? track.title : "Track" })
-        .catch(function () {});
+        .catch(() => {});
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(url);
       showToast("Link copied");

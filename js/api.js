@@ -4,7 +4,7 @@ async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: { "Content-Type": "application/json", ...options.headers },
-    credentials: "include", // Required for cookies to work cross-origin
+    credentials: "include",
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Something went wrong");
@@ -41,4 +41,7 @@ export const api = {
     }),
 
   getLeaderboard: () => request("/leaderboard"),
+
+  // NEW: Fetch the real music catalog
+  getCatalog: () => request("/catalog"),
 };

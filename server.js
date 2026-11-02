@@ -26,6 +26,7 @@ app.use("/v1/auth", authRoutes);
 app.use("/v1/claims", claimsRoutes);
 app.use("/v1/votes", voteRoutes);
 app.use("/v1/leaderboard", leaderboardRoutes);
+app.use("/v1/catalog", catalogRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Baze API is running perfectly." });

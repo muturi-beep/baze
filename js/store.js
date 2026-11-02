@@ -1,59 +1,23 @@
-import {
-  CYCLE,
-  TRACKS,
-  SEED_VOTES,
-  SEED_PREV,
-  GENRES,
-  ARTISTS,
-  PRODUCERS,
-  ALBUMS,
-  artistById,
-  producerById,
-  albumById,
-  trackById,
-} from "./data.js";
-
+import { CYCLE, GENRES } from "./data.js";
 import { api } from "./api.js";
 
 var STORAGE_KEY = "baze.state.v1";
 
-var originalClaimed = {};
-ARTISTS.forEach(function (a) {
-  originalClaimed[a.id] = a.claimed;
-});
+// We will store the real data here
+var catalog = {
+  tracks: [],
+  artists: [],
+  albums: [],
+  trackById: {},
+  artistById: {},
+  albumById: {},
+};
 
 function assignRanks(entries) {
   return entries
     .slice()
-    .sort(function (a, b) {
-      return b.votes - a.votes;
-    })
-    .map(function (e, i) {
-      return Object.assign({}, e, { rank: i + 1 });
-    });
-}
-
-function buildInitialBoard() {
-  return assignRanks(
-    TRACKS.map(function (t) {
-      return {
-        trackId: t.id,
-        votes: SEED_VOTES[t.id] || 0,
-        previousRank: SEED_PREV[t.id] || null,
-        rank: 0,
-        votedByMe: false,
-      };
-    }),
-  );
-}
-
-function loadPersisted() {
-  try {
-    var raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) {
-    return null;
-  }
+    .sort((a, b) => b.votes - a.votes)
+    .map((e, i) => Object.assign({}, e, { rank: i + 1 }));
 }
 
 var state = {
@@ -68,22 +32,22 @@ var state = {
   claimedArtistId: null,
   artistProfiles: {},
 };
-state.leaderboard[CYCLE.id] = buildInitialBoard();
 
-// rehydrate
+function loadPersisted() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Rehydrate user state from local storage
 var saved = loadPersisted();
 if (saved) {
   if (saved.user) state.user = Object.assign({}, state.user, saved.user);
-  if (saved.leaderboard && saved.leaderboard[CYCLE.id]) {
-    state.leaderboard[CYCLE.id] = saved.leaderboard[CYCLE.id];
-  }
   if (saved.claimedArtistId) state.claimedArtistId = saved.claimedArtistId;
   if (saved.artistProfiles) state.artistProfiles = saved.artistProfiles;
-  Object.keys(state.artistProfiles).forEach(function (id) {
-    if (artistById[id] && state.artistProfiles[id]) {
-      Object.assign(artistById[id], state.artistProfiles[id]);
-    }
-  });
 }
 
 function persist() {
@@ -92,7 +56,6 @@ function persist() {
       STORAGE_KEY,
       JSON.stringify({
         user: state.user,
-        leaderboard: state.leaderboard,
         claimedArtistId: state.claimedArtistId,
         artistProfiles: state.artistProfiles,
         cycleId: state.cycle.id,
@@ -106,9 +69,7 @@ var listeners = new Set();
 
 export function subscribe(fn) {
   listeners.add(fn);
-  return function () {
-    listeners.delete(fn);
-  };
+  return () => listeners.delete(fn);
 }
 
 export function getState() {
@@ -118,88 +79,116 @@ export function getState() {
 function update(patch) {
   Object.assign(state, patch);
   persist();
-  listeners.forEach(function (fn) {
-    fn(state);
-  });
+  listeners.forEach((fn) => fn(state));
 }
 
-export function resetDemo() {
+// --- CATALOG SYNC ---
+export async function syncCatalog() {
   try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch (e) {}
-  state.user = {
-    id: "usr_demo",
-    name: "Demo Fan",
-    verified: false,
-    votesRemaining: CYCLE.fanVoteBudget,
-  };
-  state.cycle = Object.assign({}, CYCLE);
-  state.leaderboard = {};
-  state.leaderboard[CYCLE.id] = buildInitialBoard();
-  state.claimedArtistId = null;
-  state.artistProfiles = {};
-  Object.keys(originalClaimed).forEach(function (id) {
-    if (!artistById[id]) return;
-    artistById[id].claimed = originalClaimed[id];
-    delete artistById[id].bio;
-    delete artistById[id].links;
-    delete artistById[id].photoUrl;
-  });
-  persist();
-  listeners.forEach(function (fn) {
-    fn(state);
-  });
+    const data = await api.getCatalog();
+
+    catalog.tracks = data.tracks || [];
+    catalog.artists = data.artists || [];
+    catalog.albums = data.albums || [];
+
+    // Build fast lookup dictionaries
+    catalog.trackById = {};
+    catalog.artistById = {};
+    catalog.albumById = {};
+
+    catalog.tracks.forEach((t) => (catalog.trackById[t._id] = t));
+    catalog.artists.forEach((a) => (catalog.artistById[a._id] = a));
+    catalog.albums.forEach((al) => (catalog.albumById[al._id] = al));
+
+    // Attach full artist/album objects to tracks for easy frontend rendering
+    catalog.tracks = catalog.tracks.map((t) => {
+      return Object.assign({}, t, {
+        id: t._id, // Standardize ID for routing
+        artist: catalog.artistById[t.artistId?._id] || {
+          name: "Unknown",
+          id: t.artistId?._id,
+        },
+        album: catalog.albumById[t.albumId?._id] || null,
+      });
+    });
+
+    // Rebuild the leaderboard with real tracks
+    buildEmptyLeaderboard();
+  } catch (err) {
+    console.error("Failed to load catalog", err);
+  }
+}
+
+function buildEmptyLeaderboard() {
+  const board = catalog.tracks.map((t) => ({
+    trackId: t._id,
+    votes: 0,
+    previousRank: null,
+    rank: 0,
+    votedByMe: false,
+  }));
+
+  state.leaderboard[CYCLE.id] = assignRanks(board);
+  update({ leaderboard: state.leaderboard });
 }
 
 export function getTrack(id) {
-  return trackById[id] || null;
+  // Return track with full details
+  const t = catalog.trackById[id];
+  if (!t) return null;
+  return Object.assign({}, t, {
+    id: t._id,
+    artist: catalog.artistById[t.artistId] || { name: "Unknown" },
+    album: catalog.albumById[t.albumId] || null,
+  });
 }
 
 export function getBoard(cycleId) {
   var b = state.leaderboard[cycleId] || [];
-  return b.map(function (e) {
-    return Object.assign({}, e, { track: trackById[e.trackId] });
-  });
+  return b
+    .map((e) => {
+      const t = getTrack(e.trackId);
+      return Object.assign({}, e, { track: t });
+    })
+    .filter((e) => e.track !== null); // Filter out deleted tracks
 }
 
+// --- LEADERBOARD SYNC ---
 export async function syncLeaderboard() {
   try {
+    // Ensure catalog is loaded first
+    if (catalog.tracks.length === 0) {
+      await syncCatalog();
+    }
+
     const data = await api.getLeaderboard();
-    const cycleId = CYCLE.id;
-    var board = state.leaderboard[cycleId] || [];
 
-    // Merge real DB counts with static seed votes
-    var merged = board.map(function (e) {
+    if (!state.leaderboard[CYCLE.id]) buildEmptyLeaderboard();
+
+    var board = state.leaderboard[CYCLE.id] || [];
+
+    var merged = board.map((e) => {
       var dbVotes = data.counts[e.trackId] || 0;
-      var seedVotes = SEED_VOTES[e.trackId] || 0;
-
       return Object.assign({}, e, {
-        // DB votes added on top of seed votes
-        votes: seedVotes + dbVotes,
+        votes: dbVotes,
         votedByMe: data.myVotes.includes(e.trackId),
-        previousRank: null, // Reset previous rank on load
+        previousRank: null,
       });
     });
 
     var nextBoard = assignRanks(merged);
-    var lb = Object.assign({}, state.leaderboard);
-    lb[cycleId] = nextBoard;
-
     update({
-      leaderboard: lb,
-      user: Object.assign({}, state.user, {
-        votesRemaining: data.votesRemaining,
-      }),
+      leaderboard: { ...state.leaderboard, [CYCLE.id]: nextBoard },
+      user: { ...state.user, votesRemaining: data.votesRemaining },
     });
   } catch (err) {
     console.error("Failed to sync leaderboard", err);
   }
 }
 
+// --- AUTH ---
 export async function loginUser(identifier, code, channel) {
   const data = await api.verifyOtp(identifier, code, channel);
-
-  // Update the local state with the real user from MongoDB
   update({
     user: {
       ...state.user,
@@ -229,221 +218,139 @@ export async function checkAuth() {
   } catch (err) {
     console.log("No active session, loading as guest");
   } finally {
-    // ALWAYS sync the leaderboard, logged in or not
+    // Load real data & votes
     await syncLeaderboard();
   }
 }
 
 export async function castVote(cycleId, trackId) {
   const idempotencyKey = crypto.randomUUID();
-  const track = trackById[trackId]; // Get the track to find the artist
+  const track = getTrack(trackId);
   const artistId = track ? track.artistId : null;
 
   try {
-    // Pass artistId to the API
     const res = await api.castVote(cycleId, trackId, artistId, idempotencyKey);
 
-    // ... rest of the function stays exactly the same
+    var board = state.leaderboard[cycleId] || [];
+    var bumped = board.map((e) =>
+      e.trackId === trackId
+        ? Object.assign({}, e, {
+            votes: e.votes + 1,
+            votedByMe: true,
+            previousRank: e.rank,
+          })
+        : e,
+    );
+    var nextBoard = assignRanks(bumped);
+    var toRank = nextBoard.find((e) => e.trackId === trackId).rank;
+
+    update({
+      leaderboard: { ...state.leaderboard, [cycleId]: nextBoard },
+      user: { ...state.user, votesRemaining: res.votesRemaining },
+    });
+
+    return { rank: toRank, budgetUsed: 10 - res.votesRemaining };
   } catch (err) {
-    if (err.message.includes("already voted")) {
-      throw { code: "ALREADY_VOTED" };
-    }
-    if (err.message.includes("own track")) {
+    if (err.message.includes("already voted")) throw { code: "ALREADY_VOTED" };
+    if (err.message.includes("own track"))
       throw { code: "CANNOT_VOTE_FOR_SELF" };
-    }
-    if (err.message.includes("used all your votes")) {
+    if (err.message.includes("used all your votes"))
       throw { code: "NO_VOTES_LEFT" };
-    }
     throw { code: "UNKNOWN" };
   }
 }
 
-// ---- genres ----
+// --- GETTERS (Updated for Real Data) ---
 export function getGenres() {
   return GENRES;
 }
-
 export function getGenre(genreId) {
-  return (
-    GENRES.find(function (g) {
-      return g.id === genreId;
-    }) || null
-  );
+  return GENRES.find((g) => g.id === genreId) || null;
 }
 
 export function getGenreBoard(cycleId, genreId) {
   var b = state.leaderboard[cycleId] || [];
   return b
-    .filter(function (e) {
-      var t = trackById[e.trackId];
+    .filter((e) => {
+      const t = getTrack(e.trackId);
       return t && t.genre === genreId;
     })
-    .sort(function (a, c) {
-      return c.votes - a.votes;
-    })
-    .map(function (e, i) {
-      return Object.assign({}, e, {
-        rank: i + 1,
-        previousRank: null,
-        track: trackById[e.trackId],
-      });
-    });
+    .sort((a, c) => c.votes - a.votes)
+    .map((e, i) =>
+      Object.assign({}, e, { rank: i + 1, track: getTrack(e.trackId) }),
+    );
 }
 
-// ---- albums ----
 export function getAlbums() {
-  return ALBUMS;
+  return catalog.albums;
 }
 export function getAlbum(id) {
-  return albumById[id] || null;
+  return catalog.albumById[id] || null;
 }
 
 export function getAlbumBoard(cycleId, genreId) {
   var board = state.leaderboard[cycleId] || [];
   var byAlbum = {};
-  board.forEach(function (e) {
-    var t = trackById[e.trackId];
+  board.forEach((e) => {
+    const t = getTrack(e.trackId);
     if (!t || !t.album) return;
     if (genreId && t.genre !== genreId) return;
-    var aid = t.album.id;
+    const aid = t.albumId;
     if (!byAlbum[aid]) byAlbum[aid] = { albumId: aid, votes: 0, trackCount: 0 };
     byAlbum[aid].votes += e.votes;
     byAlbum[aid].trackCount += 1;
   });
   return Object.keys(byAlbum)
-    .map(function (k) {
-      return byAlbum[k];
-    })
-    .sort(function (a, c) {
-      return c.votes - a.votes;
-    })
-    .map(function (e, i) {
-      return Object.assign({}, e, { rank: i + 1, album: albumById[e.albumId] });
-    });
+    .map((k) => byAlbum[k])
+    .sort((a, c) => c.votes - a.votes)
+    .map((e, i) =>
+      Object.assign({}, e, { rank: i + 1, album: getAlbum(e.albumId) }),
+    );
 }
 
 export function getAlbumTracks(cycleId, albumId) {
   var board = state.leaderboard[cycleId] || [];
   return board
-    .filter(function (e) {
-      var t = trackById[e.trackId];
-      return t && t.album && t.album.id === albumId;
+    .filter((e) => {
+      const t = getTrack(e.trackId);
+      return t && t.albumId === albumId;
     })
-    .sort(function (a, b) {
-      return b.votes - a.votes;
-    })
-    .map(function (e, i) {
-      return Object.assign({}, e, {
-        rank: i + 1,
-        previousRank: null,
-        track: trackById[e.trackId],
-      });
-    });
+    .sort((a, b) => b.votes - a.votes)
+    .map((e, i) =>
+      Object.assign({}, e, { rank: i + 1, track: getTrack(e.trackId) }),
+    );
 }
 
-// ---- producers ----
-export function getProducers() {
-  return PRODUCERS;
-}
-export function getProducer(id) {
-  return producerById[id] || null;
-}
-
-export function getProducerBoard(cycleId, genreId) {
-  var board = state.leaderboard[cycleId] || [];
-  var byProducer = {};
-  board.forEach(function (e) {
-    var t = trackById[e.trackId];
-    if (!t || !t.producers) return;
-    if (genreId && t.genre !== genreId) return;
-    t.producers.forEach(function (p) {
-      if (!byProducer[p.id])
-        byProducer[p.id] = { producerId: p.id, votes: 0, trackCount: 0 };
-      byProducer[p.id].votes += e.votes;
-      byProducer[p.id].trackCount += 1;
-    });
-  });
-  return Object.keys(byProducer)
-    .map(function (k) {
-      return byProducer[k];
-    })
-    .sort(function (a, c) {
-      return c.votes - a.votes;
-    })
-    .map(function (e, i) {
-      return Object.assign({}, e, {
-        rank: i + 1,
-        producer: producerById[e.producerId],
-      });
-    });
-}
-
-export function getProducerTracks(cycleId, producerId) {
-  var board = state.leaderboard[cycleId] || [];
-  return board
-    .filter(function (e) {
-      var t = trackById[e.trackId];
-      return (
-        t &&
-        t.producers &&
-        t.producers.some(function (p) {
-          return p.id === producerId;
-        })
-      );
-    })
-    .sort(function (a, b) {
-      return b.votes - a.votes;
-    })
-    .map(function (e, i) {
-      return Object.assign({}, e, {
-        rank: i + 1,
-        previousRank: null,
-        track: trackById[e.trackId],
-      });
-    });
-}
-
-// ---- artists ----
 export function getArtists() {
-  return ARTISTS;
+  return catalog.artists;
 }
 export function getArtist(id) {
-  return artistById[id] || null;
+  return catalog.artistById[id] || null;
 }
 
 export function getArtistTracks(cycleId, artistId) {
   var board = state.leaderboard[cycleId] || [];
   return board
-    .filter(function (e) {
-      var t = trackById[e.trackId];
-      return t && t.artist && t.artist.id === artistId;
+    .filter((e) => {
+      const t = getTrack(e.trackId);
+      return t && t.artistId === artistId;
     })
-    .sort(function (a, b) {
-      return b.votes - a.votes;
-    })
-    .map(function (e, i) {
-      return Object.assign({}, e, {
-        rank: i + 1,
-        previousRank: null,
-        track: trackById[e.trackId],
-      });
-    });
+    .sort((a, b) => b.votes - a.votes)
+    .map((e, i) =>
+      Object.assign({}, e, { rank: i + 1, track: getTrack(e.trackId) }),
+    );
 }
 
 export function getArtistTotals(cycleId, artistId) {
   var tracks = getArtistTracks(cycleId, artistId);
-  var totalVotes = tracks.reduce(function (s, e) {
-    return s + e.votes;
-  }, 0);
-  return { trackCount: tracks.length, totalVotes: totalVotes, tracks: tracks };
+  var totalVotes = tracks.reduce((s, e) => s + e.votes, 0);
+  return { trackCount: tracks.length, totalVotes, tracks };
 }
 
-// ---- claim ----
+// Search Artists from real data
 export function searchArtists(query) {
   var q = (query || "").toLowerCase();
-  return ARTISTS.map(function (a) {
-    return artistById[a.id];
-  }).filter(function (a) {
+  return catalog.artists.filter((a) => {
     if (!q) return true;
     return a.name.toLowerCase().indexOf(q) !== -1;
   });
@@ -452,11 +359,7 @@ export function searchArtists(query) {
 export async function logoutUser() {
   try {
     await api.logout();
-  } catch (err) {
-    console.error("Logout failed on backend", err);
-  }
-
-  // Reset local state to Guest
+  } catch (err) {}
   update({
     user: {
       id: "usr_guest",
@@ -467,20 +370,16 @@ export async function logoutUser() {
     },
     claimedArtistId: null,
   });
-
-  // Optionally force a sync to clear out votedByMe states
   await syncLeaderboard();
 }
 
 export async function claimArtist(artistId, profile) {
   if (state.claimedArtistId) return null;
-  var artist = artistById[artistId];
+  var artist = getArtist(artistId);
   if (!artist) return null;
 
   try {
-    // Call the backend
     const data = await api.claimArtist(artistId, artist.name);
-
     var profileData = {
       claimed: true,
       bio: profile.bio || "",
@@ -492,7 +391,6 @@ export async function claimArtist(artistId, profile) {
     state.claimedArtistId = artistId;
     Object.assign(artist, profileData);
 
-    // Update local user state to reflect new roles
     update({
       user: {
         ...state.user,
@@ -506,7 +404,6 @@ export async function claimArtist(artistId, profile) {
 
     return artist;
   } catch (err) {
-    console.error(err);
     throw err;
   }
 }
@@ -514,7 +411,6 @@ export async function claimArtist(artistId, profile) {
 export function getClaimedArtistId() {
   return state.claimedArtistId;
 }
-
 export function getClaimedArtist() {
-  return state.claimedArtistId ? artistById[state.claimedArtistId] : null;
+  return state.claimedArtistId ? getArtist(state.claimedArtistId) : null;
 }
