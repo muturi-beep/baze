@@ -372,9 +372,8 @@ export function albumCard(opts) {
       alt: "",
       onError: function (e) {
         e.target.src = fallbackImg;
-      }, // <--- Make sure this is here
+      },
     }),
-    // ...
     h("span", { class: "title" }, alb.title),
     h("span", { class: "artist" }, opts.artist ? opts.artist.name : ""),
     h("span", { class: "votes" }, opts.votes.toLocaleString() + " votes"),

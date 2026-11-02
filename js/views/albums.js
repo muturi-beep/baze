@@ -46,10 +46,15 @@ export function AlbumsView() {
         h(
           "div",
           { class: "album-grid" },
-          board.map(function (a, i) {
-            var artist = a.album ? getArtist(a.album.artistId) : null;
+          board.map(function (a) {
+            // Convert ObjectId to string for the lookup
+            var artist =
+              a.album && a.album.artistId
+                ? getArtist(a.album.artistId.toString())
+                : null;
             var fallbackImg =
               "https://picsum.photos/seed/" + a.albumId + "/400";
+
             return h(
               "a",
               { class: "album-tile", href: "#/album/" + a.albumId },
@@ -65,7 +70,6 @@ export function AlbumsView() {
                 }),
                 h("span", { class: "album-rank" }, "#" + a.rank),
               ),
-              // ... rest of the tile
               h("span", { class: "album-title" }, a.album.title),
               h("span", { class: "album-artist" }, artist ? artist.name : ""),
               h(

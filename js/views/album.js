@@ -56,8 +56,8 @@ export function AlbumView(params) {
       ),
     );
 
-    // Replace the existing img tag in album.js
-    var fallbackImg = "https://picsum.photos/seed/" + album._id + "/400";
+    var fallbackImg =
+      "https://picsum.photos/seed/" + (album._id || albumId) + "/400";
     el.appendChild(
       h(
         "div",
@@ -75,11 +75,17 @@ export function AlbumView(params) {
           "a",
           {
             class: "album-hero-artist",
-            href: artist ? "#/artist/" + artist.id : "#",
+            href: artist ? "#/artist/" + (artist._id || artist.id) : "#",
           },
           artist ? artist.name : "Unknown",
         ),
-        h("p", { class: "album-hero-meta" }, album.year + " · " + album.genre),
+        h(
+          "p",
+          { class: "album-hero-meta" },
+          (album.releaseDate || album.year || "2026") +
+            " · " +
+            (album.genre || "Music"),
+        ),
         h(
           "p",
           { class: "album-hero-votes" },
