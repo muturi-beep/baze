@@ -104,7 +104,9 @@ export function HomeView() {
                     h(
                       "span",
                       { class: "title" },
-                      e.track.title + " — " + e.track.artist.name,
+                      e.track.title +
+                        " — " +
+                        (e.track.artist?.name || "Unknown"),
                     ),
                     h("span", { class: "votes" }, e.votes.toLocaleString()),
                   ),

@@ -204,7 +204,10 @@ export function leaderboardRow(entry) {
     { class: entry.votedByMe ? "voted" : "" },
     h(
       "a",
-      { class: "row-link", href: "#/track/" + entry.track.id },
+      {
+        class: "row-link",
+        href: "#/track/" + (entry.track.id || entry.track._id),
+      },
       h("span", { class: "rank" }, "#" + entry.rank),
       rankDelta(entry.previousRank, entry.rank),
       h(
@@ -213,7 +216,7 @@ export function leaderboardRow(entry) {
         h(
           "span",
           { class: "title" },
-          entry.track.title + " — " + entry.track.artist.name,
+          entry.track.title + " — " + (entry.track.artist?.name || "Unknown"),
         ),
         h("span", { class: "votes" }, entry.votes.toLocaleString() + " votes"),
       ),
@@ -225,12 +228,20 @@ export function leaderboardRow(entry) {
 }
 
 export function trackCard(track) {
+  var trackId = track.id || track._id;
+  var fallbackImg = "https://picsum.photos/seed/" + trackId + "/400";
   return h(
     "a",
-    { class: "track-card", href: "#/track/" + track.id },
-    h("img", { src: track.artworkUrl, alt: "" }),
+    { class: "track-card", href: "#/track/" + trackId },
+    h("img", {
+      src: track.artworkUrl || fallbackImg,
+      alt: "",
+      onError: function (e) {
+        e.target.src = fallbackImg;
+      },
+    }),
     h("span", { class: "title" }, track.title),
-    h("span", { class: "artist" }, track.artist.name),
+    h("span", { class: "artist" }, track.artist?.name || "Unknown"),
   );
 }
 
@@ -267,15 +278,23 @@ export function bottomNav(activeKey) {
 
 export function exploreCard(opts) {
   var t = opts.track;
+  var trackId = t.id || t._id;
+  var fallbackImg = "https://picsum.photos/seed/" + trackId + "/400";
   return h(
     "a",
     {
       class: "explore-card" + (opts.votedByMe ? " voted" : ""),
-      href: "#/track/" + t.id,
+      href: "#/track/" + trackId,
     },
-    h("img", { src: t.artworkUrl, alt: "" }),
+    h("img", {
+      src: t.artworkUrl || fallbackImg,
+      alt: "",
+      onError: function (e) {
+        e.target.src = fallbackImg;
+      },
+    }),
     h("span", { class: "title" }, t.title),
-    h("span", { class: "artist" }, t.artist.name),
+    h("span", { class: "artist" }, t.artist?.name || "Unknown"),
     h(
       "span",
       { class: "meta" },
@@ -341,13 +360,22 @@ export function genreChips(genres, currentId, onSelect) {
 
 export function albumCard(opts) {
   var alb = opts.album;
-  var artist = opts.artist;
+  if (!alb) return h("span");
+  var albId = alb.id || alb._id;
+  var fallbackImg = "https://picsum.photos/seed/" + albId + "/400";
+
   return h(
     "a",
-    { class: "album-card", href: "#/album/" + alb.id },
-    h("img", { src: alb.artworkUrl, alt: "" }),
+    { class: "album-card", href: "#/album/" + albId },
+    h("img", {
+      src: alb.artworkUrl || fallbackImg,
+      alt: "",
+      onError: function (e) {
+        e.target.src = fallbackImg;
+      },
+    }),
     h("span", { class: "title" }, alb.title),
-    h("span", { class: "artist" }, artist ? artist.name : ""),
+    h("span", { class: "artist" }, opts.artist ? opts.artist.name : ""),
     h("span", { class: "votes" }, opts.votes.toLocaleString() + " votes"),
   );
 }
