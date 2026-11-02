@@ -23,21 +23,31 @@ let isConnected = false;
 
 const connectDB = async () => {
   if (isConnected) return;
-  if (!process.env.MONGODB_URI) return;
+  if (!process.env.MONGODB_URI) {
+    throw new Error(
+      "MONGODB_URI is missing from Vercel Environment Variables!",
+    );
+  }
 
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     isConnected = true;
     console.log("✅ MongoDB Connected");
   } catch (err) {
-    console.error("❌ MongoDB Error:", err);
+    console.error("❌ MongoDB Error:", err.message);
+    throw new Error("Database connection failed: " + err.message);
   }
 };
 
-// Middleware to ensure DB is connected before API routes
+// Middleware to ensure DB is connected
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    // If DB fails, send the exact error to the frontend
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Routes
@@ -49,7 +59,6 @@ app.use("/v1/catalog", catalogRoutes);
 
 app.get("/", (req, res) => res.json({ message: "Baze API is running." }));
 
-// ONLY listen locally. Vercel handles the server in production.
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 4001;
   app.listen(PORT, () =>
