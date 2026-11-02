@@ -77,11 +77,9 @@ export function ClaimView() {
 
   function renderStep1() {
     var all = searchArtists("");
+    // MongoDB uses claimedBy to indicate if an artist is claimed
     var unclaimed = all.filter(function (a) {
-      return !a.claimed;
-    });
-    var claimed = all.filter(function (a) {
-      return a.claimed;
+      return !a.claimedBy;
     });
     var filtered = query
       ? all.filter(function (a) {
@@ -101,7 +99,8 @@ export function ClaimView() {
               type: "button",
               class: "claim-row",
               onClick: function () {
-                selectedId = a.id;
+                // MongoDB uses _id instead of id
+                selectedId = a._id;
                 step = 2;
                 render();
               },
@@ -180,9 +179,10 @@ export function ClaimView() {
   }
 
   function renderStep2() {
+    // Use _id here too
     var artist = selectedId
       ? searchArtists("").find(function (a) {
-          return a.id === selectedId;
+          return a._id === selectedId;
         })
       : null;
     if (!artist) {
@@ -287,7 +287,7 @@ export function ClaimView() {
   function renderStep3() {
     var artist = selectedId
       ? searchArtists("").find(function (a) {
-          return a.id === selectedId;
+          return a._id === selectedId;
         })
       : null;
     if (!artist) {
@@ -373,9 +373,14 @@ export function ClaimView() {
                 bio: draft.bio,
                 photoUrl: draft.photoUrl,
                 links: { instagram: draft.instagram, youtube: draft.youtube },
-              });
-              showToast("Profile claimed");
-              render();
+              })
+                .then(function () {
+                  showToast("Profile claimed");
+                  render();
+                })
+                .catch(function (err) {
+                  showToast(err.message || "Failed to claim");
+                });
             },
           },
           "Save & claim",
@@ -402,7 +407,7 @@ export function ClaimView() {
         "a",
         {
           class: "claim-primary",
-          href: artist ? "#/artist/" + artist.id : "#/",
+          href: artist ? "#/artist/" + artist._id : "#/",
         },
         "View my artist page",
       ),
