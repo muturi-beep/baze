@@ -65,8 +65,10 @@ route("/ranking-explained", function () {
 route("/login", function () {
   return LoginView();
 });
-checkAuth().then(() => {
-  start(document.getElementById("app"));
-});
+checkAuth()
+  .catch((err) => console.error("Auth check bypassed:", err))
+  .finally(() => {
+    start(document.getElementById("app"));
+  });
 
 start(document.getElementById("app"));
