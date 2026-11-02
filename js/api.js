@@ -1,4 +1,4 @@
-const BASE_URL = "/api";
+const BASE_URL = "/v1";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

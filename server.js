@@ -22,14 +22,14 @@ let isConnected = false;
 const connectDB = async () => {
   if (isConnected) return;
   if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is missing in Vercel Environment Variables");
+    throw new Error("MONGODB_URI is missing");
   }
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     isConnected = true;
     console.log("✅ MongoDB Connected");
   } catch (err) {
-    console.error("❌ MongoDB Connection Error:", err.message);
+    console.error("❌ MongoDB Error:", err.message);
     throw err;
   }
 };
@@ -43,24 +43,16 @@ app.use(async (req, res, next) => {
   }
 });
 
-// NO MORE /v1 PREFIX HERE
-app.use("/auth", authRoutes);
-app.use("/claims", claimsRoutes);
-app.use("/votes", voteRoutes);
-app.use("/leaderboard", leaderboardRoutes);
-app.use("/catalog", catalogRoutes);
+// Routes mounted at /v1
+app.use("/v1/auth", authRoutes);
+app.use("/v1/claims", claimsRoutes);
+app.use("/v1/votes", voteRoutes);
+app.use("/v1/leaderboard", leaderboardRoutes);
+app.use("/v1/catalog", catalogRoutes);
 
-app.get("/api", (req, res) =>
-  res.json({ message: "Baze API is running perfectly." }),
-);
+app.get("/", (req, res) => res.json({ message: "Baze API is running." }));
 
-app.use((err, req, res, next) => {
-  console.error("🔥 Fatal Server Error:", err);
-  res
-    .status(500)
-    .json({ error: "Internal server error", details: err.message });
-});
-
+// ONLY listen locally
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 4001;
   app.listen(PORT, () =>
