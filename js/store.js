@@ -3,7 +3,6 @@ import { api } from "./api.js";
 
 var STORAGE_KEY = "baze.state.v1";
 
-// We will store the real data here
 var catalog = {
   tracks: [],
   artists: [],
@@ -42,7 +41,6 @@ function loadPersisted() {
   }
 }
 
-// Rehydrate user state from local storage
 var saved = loadPersisted();
 if (saved) {
   if (saved.user) state.user = Object.assign({}, state.user, saved.user);
@@ -82,7 +80,6 @@ function update(patch) {
   listeners.forEach((fn) => fn(state));
 }
 
-// --- CATALOG SYNC ---
 export async function syncCatalog() {
   try {
     const data = await api.getCatalog();
@@ -91,7 +88,6 @@ export async function syncCatalog() {
     catalog.artists = data.artists || [];
     catalog.albums = data.albums || [];
 
-    // Build fast lookup dictionaries
     catalog.trackById = {};
     catalog.artistById = {};
     catalog.albumById = {};
@@ -100,19 +96,6 @@ export async function syncCatalog() {
     catalog.artists.forEach((a) => (catalog.artistById[a._id] = a));
     catalog.albums.forEach((al) => (catalog.albumById[al._id] = al));
 
-    // Attach full artist/album objects to tracks for easy frontend rendering
-    catalog.tracks = catalog.tracks.map((t) => {
-      return Object.assign({}, t, {
-        id: t._id, // Standardize ID for routing
-        artist: catalog.artistById[t.artistId?._id] || {
-          name: "Unknown",
-          id: t.artistId?._id,
-        },
-        album: catalog.albumById[t.albumId?._id] || null,
-      });
-    });
-
-    // Rebuild the leaderboard with real tracks
     buildEmptyLeaderboard();
   } catch (err) {
     console.error("Failed to load catalog", err);
@@ -133,13 +116,16 @@ function buildEmptyLeaderboard() {
 }
 
 export function getTrack(id) {
-  // Return track with full details
   const t = catalog.trackById[id];
   if (!t) return null;
+
+  // Handle Mongoose populated objects
   return Object.assign({}, t, {
     id: t._id,
-    artist: catalog.artistById[t.artistId] || { name: "Unknown" },
-    album: catalog.albumById[t.albumId] || null,
+    artistId: t.artistId ? t.artistId._id || t.artistId : null,
+    artist: t.artistId || { name: "Unknown" },
+    albumId: t.albumId ? t.albumId._id || t.albumId : null,
+    album: t.albumId || null,
   });
 }
 
@@ -150,13 +136,11 @@ export function getBoard(cycleId) {
       const t = getTrack(e.trackId);
       return Object.assign({}, e, { track: t });
     })
-    .filter((e) => e.track !== null); // Filter out deleted tracks
+    .filter((e) => e.track !== null);
 }
 
-// --- LEADERBOARD SYNC ---
 export async function syncLeaderboard() {
   try {
-    // Ensure catalog is loaded first
     if (catalog.tracks.length === 0) {
       await syncCatalog();
     }
@@ -186,7 +170,6 @@ export async function syncLeaderboard() {
   }
 }
 
-// --- AUTH ---
 export async function loginUser(identifier, code, channel) {
   const data = await api.verifyOtp(identifier, code, channel);
   update({
@@ -218,7 +201,6 @@ export async function checkAuth() {
   } catch (err) {
     console.log("No active session, loading as guest");
   } finally {
-    // Load real data & votes
     await syncLeaderboard();
   }
 }
@@ -260,7 +242,6 @@ export async function castVote(cycleId, trackId) {
   }
 }
 
-// --- GETTERS (Updated for Real Data) ---
 export function getGenres() {
   return GENRES;
 }
@@ -293,7 +274,7 @@ export function getAlbumBoard(cycleId, genreId) {
   var byAlbum = {};
   board.forEach((e) => {
     const t = getTrack(e.trackId);
-    if (!t || !t.album) return;
+    if (!t || !t.albumId) return;
     if (genreId && t.genre !== genreId) return;
     const aid = t.albumId;
     if (!byAlbum[aid]) byAlbum[aid] = { albumId: aid, votes: 0, trackCount: 0 };
@@ -347,7 +328,21 @@ export function getArtistTotals(cycleId, artistId) {
   return { trackCount: tracks.length, totalVotes, tracks };
 }
 
-// Search Artists from real data
+// --- PRODUCERS (Stubs to prevent Vite build errors) ---
+export function getProducers() {
+  return [];
+}
+export function getProducer(id) {
+  return null;
+}
+export function getProducerBoard(cycleId, genreId) {
+  return [];
+}
+export function getProducerTracks(cycleId, producerId) {
+  return [];
+}
+// -----------------------------------------------------
+
 export function searchArtists(query) {
   var q = (query || "").toLowerCase();
   return catalog.artists.filter((a) => {

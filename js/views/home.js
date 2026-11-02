@@ -6,7 +6,6 @@ import {
   getGenres,
   getGenre,
   getAlbumBoard,
-  getProducerBoard,
   getArtist,
 } from "../store.js";
 import {
@@ -17,7 +16,6 @@ import {
   bottomNav,
   genreChips,
   albumCard,
-  producerCard,
 } from "../components.js";
 
 export function HomeView() {
@@ -40,13 +38,12 @@ export function HomeView() {
     var allEntries = getBoard(s.cycle.id);
     var entries = currentGenreId
       ? allEntries.filter(function (e) {
-          return e.track.genre === currentGenreId;
+          return e.track && e.track.genre === currentGenreId;
         })
       : allEntries;
 
     var trending = entries.slice(0, 4);
     var topAlbums = getAlbumBoard(s.cycle.id, currentGenreId).slice(0, 4);
-    var topProducers = getProducerBoard(s.cycle.id, currentGenreId).slice(0, 4);
 
     el.innerHTML = "";
 
@@ -56,7 +53,6 @@ export function HomeView() {
         { class: "topbar" },
         h("button", { "aria-label": "menu" }, "☰"),
         h("span", { class: "brand" }, "BAZE"),
-        // --- FIXED DYNAMIC PROFILE ICON ---
         h(
           "a",
           {
@@ -140,42 +136,6 @@ export function HomeView() {
                 artist: a.album ? getArtist(a.album.artistId) : null,
                 votes: a.votes,
               });
-            }),
-          ),
-        ),
-      );
-    }
-
-    // ---- Top producers ----
-    if (topProducers.length > 0) {
-      el.appendChild(
-        h(
-          "section",
-          {},
-          h(
-            "div",
-            { class: "section-head" },
-            h("h2", {}, sectionLabel("Top producers", genre)),
-            h(
-              "a",
-              { class: "see-all", href: "#/producers" },
-              "All producers →",
-            ),
-          ),
-          h(
-            "ol",
-            { class: "producer-list" },
-            topProducers.map(function (p) {
-              return h(
-                "li",
-                {},
-                producerCard({
-                  producer: p.producer,
-                  rank: p.rank,
-                  votes: p.votes,
-                  trackCount: p.trackCount,
-                }),
-              );
             }),
           ),
         ),

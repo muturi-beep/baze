@@ -8,6 +8,7 @@ import authRoutes from "./routes/auth.js";
 import claimsRoutes from "./routes/claims.js";
 import voteRoutes from "./routes/votes.js";
 import leaderboardRoutes from "./routes/leaderboard.js";
+import catalogRoutes from "./routes/catalog.js";
 
 dotenv.config();
 
