@@ -6,24 +6,18 @@ const router = express.Router();
 
 router.get("/", optionalAuth, async (req, res) => {
   try {
-    const cycleId = "baze_wk12_kenya"; // Hardcoded for now
-
-    // 1. Aggregate total votes per track from the DB
+    const cycleId = "baze_wk12_kenya";
     const voteAggregation = await Vote.aggregate([
       { $match: { cycleId } },
       { $group: { _id: "$trackId", totalVotes: { $sum: 1 } } },
     ]);
-
-    // Convert array to object: { "trk_01": 5, "trk_02": 12 }
     const counts = {};
     voteAggregation.forEach((item) => {
       counts[item._id] = item.totalVotes;
     });
 
-    // 2. Find which tracks THIS user voted for (if logged in)
     let myVotes = [];
     let votesRemaining = 10;
-
     if (req.user) {
       const userVotes = await Vote.find({
         voterId: req.user._id,

@@ -8,7 +8,7 @@ import authRoutes from "./routes/auth.js";
 import claimsRoutes from "./routes/claims.js";
 import voteRoutes from "./routes/votes.js";
 import leaderboardRoutes from "./routes/leaderboard.js";
-import catalogRoutes from "./routes/catalog.js"; // Make sure this is created!
+import catalogRoutes from "./routes/catalog.js";
 
 dotenv.config();
 
@@ -23,9 +23,7 @@ app.use(
   }),
 );
 
-// --- VERCEL SERVERLESS DATABASE CONNECTION ---
 let cachedConnection = null;
-
 const connectDB = async () => {
   if (cachedConnection) return cachedConnection;
   cachedConnection = mongoose
@@ -42,7 +40,6 @@ const connectDB = async () => {
   return cachedConnection;
 };
 
-// Middleware to guarantee DB is connected BEFORE any route runs
 app.use(async (req, res, next) => {
   try {
     await connectDB();
@@ -52,23 +49,28 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Routes
+// --- ROUTES ---
 app.use("/v1/auth", authRoutes);
 app.use("/v1/claims", claimsRoutes);
 app.use("/v1/votes", voteRoutes);
 app.use("/v1/leaderboard", leaderboardRoutes);
 app.use("/v1/catalog", catalogRoutes);
 
-app.get("/", (req, res) => {
-  res.json({ message: "Baze API is running perfectly." });
+app.get("/", (req, res) =>
+  res.json({ message: "Baze API is running perfectly." }),
+);
+
+// --- CATCH-ALL 404 ---
+app.use((req, res) => {
+  console.log(`404 Not Found: ${req.method} ${req.url}`);
+  res.status(404).json({ error: `Route not found: ${req.originalUrl}` });
 });
 
-// Only listen locally. Vercel handles the serverless routing.
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 4001;
-  app.listen(PORT, () => {
-    console.log(`🚀 Baze Backend running on http://localhost:${PORT}`);
-  });
+  app.listen(PORT, () =>
+    console.log(`🚀 Baze Backend running on http://localhost:${PORT}`),
+  );
 }
 
 export default app;
