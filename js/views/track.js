@@ -109,8 +109,14 @@ export function TrackView(params) {
       ),
     );
 
-    // --- YOUTUBE EMBED PLAYER ---
+    // --- YOUTUBE EMBED PLAYER (Hardened) ---
     if (track.youtubeVideoId) {
+      // 1. Define the origin (your live domain)
+      const origin = window.location.origin;
+
+      // 2. Build the secure embed URL with origin and enablejsapi
+      const embedUrl = `https://www.youtube.com/embed/${track.youtubeVideoId}?origin=${encodeURIComponent(origin)}&enablejsapi=1&rel=0`;
+
       details.appendChild(
         h(
           "div",
@@ -125,13 +131,36 @@ export function TrackView(params) {
           h("iframe", {
             width: "100%",
             height: "200",
-            src: `https://www.youtube.com/embed/${track.youtubeVideoId}`,
+            src: embedUrl,
             title: "YouTube video player",
             frameborder: "0",
+            // 3. The referrerpolicy attribute is CRITICAL for cross-origin embeds
+            referrerpolicy: "strict-origin-when-cross-origin",
             allow:
-              "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+              "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
             allowfullscreen: true,
           }),
+        ),
+      );
+
+      // 4. Provide a fallback link in case the video owner disabled embedding
+      details.appendChild(
+        h(
+          "a",
+          {
+            href: `https://www.youtube.com/watch?v=${track.youtubeVideoId}`,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            style: {
+              display: "block",
+              textAlign: "center",
+              marginTop: "12px",
+              fontSize: "13px",
+              color: "var(--accent)",
+              textDecoration: "none",
+            },
+          },
+          "If the player fails, watch directly on YouTube →",
         ),
       );
     }
