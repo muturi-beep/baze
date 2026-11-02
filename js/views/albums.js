@@ -48,15 +48,24 @@ export function AlbumsView() {
           { class: "album-grid" },
           board.map(function (a, i) {
             var artist = a.album ? getArtist(a.album.artistId) : null;
+            var fallbackImg =
+              "https://picsum.photos/seed/" + a.albumId + "/400";
             return h(
               "a",
               { class: "album-tile", href: "#/album/" + a.albumId },
               h(
                 "div",
                 { class: "album-tile-art" },
-                h("img", { src: a.album.artworkUrl, alt: "" }),
+                h("img", {
+                  src: a.album.artworkUrl || fallbackImg,
+                  alt: "",
+                  onError: function (e) {
+                    e.target.src = fallbackImg;
+                  },
+                }),
                 h("span", { class: "album-rank" }, "#" + a.rank),
               ),
+              // ... rest of the tile
               h("span", { class: "album-title" }, a.album.title),
               h("span", { class: "album-artist" }, artist ? artist.name : ""),
               h(

@@ -56,11 +56,20 @@ export function AlbumView(params) {
       ),
     );
 
+    // Replace the existing img tag in album.js
+    var fallbackImg = "https://picsum.photos/seed/" + album._id + "/400";
     el.appendChild(
       h(
         "div",
         { class: "album-hero" },
-        h("img", { src: album.artworkUrl, alt: "", class: "album-hero-art" }),
+        h("img", {
+          src: album.artworkUrl || fallbackImg,
+          alt: "",
+          class: "album-hero-art",
+          onError: function (e) {
+            e.target.src = fallbackImg;
+          },
+        }),
         h("h1", { class: "album-hero-title" }, album.title),
         h(
           "a",
