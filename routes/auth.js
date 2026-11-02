@@ -45,30 +45,23 @@ router.post("/request-otp", otpLimiter, async (req, res) => {
       from: "Baze <onboarding@resend.dev>", // Use your Resend test address for now
       to: identifier, // The email address the user entered
       subject: "Your Baze Login Code",
-      html: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Welcome to Baze</h2>
-          <p>Your 6-digit login code is:</p>
-          <h1 style="color: #ff8a3d; letter-spacing: 5px;">${code}</h1>
-          <p>This code expires in 10 minutes.</p>
-        </div>
-      `,
+      html: `<p>Your 6-digit login code is: <strong>${code}</strong></p><p>This code expires in 10 minutes.</p>`,
     });
 
     if (error) {
       console.error("Resend Error:", error);
+
       return res
         .status(500)
-        .json({ error: "Failed to send email. Please try again." });
+        .json({ error: error.message || "Failed to send email" });
     }
 
-    // Return success (no longer sending the devCode back!)
+    } catch (emailErr) {
+      console.error("Resend SDK Crash:", emailErr);
+      return res.status(500).json({ error: "Email service unavailable" });
+    }
+
     res.json({ success: true, message: "OTP sent to your email" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
 
 // 2. VERIFY OTP
 router.post("/verify-otp", async (req, res) => {

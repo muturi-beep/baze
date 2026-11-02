@@ -6,8 +6,22 @@ async function request(path, options = {}) {
     headers: { "Content-Type": "application/json", ...options.headers },
     credentials: "include",
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Something went wrong");
+
+  // Read text first to catch empty responses from server crashes
+  const text = await res.text();
+
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (e) {
+    console.error("Server returned non-JSON response:", text);
+    throw new Error(`Server error (${res.status}). Please check Vercel logs.`);
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || `Request failed with status ${res.status}`);
+  }
+
   return data;
 }
 
@@ -41,7 +55,5 @@ export const api = {
     }),
 
   getLeaderboard: () => request("/leaderboard"),
-
-  // NEW: Fetch the real music catalog
   getCatalog: () => request("/catalog"),
 };
