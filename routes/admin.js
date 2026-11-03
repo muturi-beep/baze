@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import Artist from "../models/Artist.js";
 import Album from "../models/Album.js";
 import Track from "../models/Track.js";
@@ -14,7 +15,6 @@ const router = express.Router();
 
 router.post("/reset-cycle", requireAuth, async (req, res) => {
   try {
-    // 1. Verify Admin
     if (!process.env.ADMIN_EMAIL) {
       return res
         .status(500)
@@ -25,12 +25,9 @@ router.post("/reset-cycle", requireAuth, async (req, res) => {
     if (req.user.email !== process.env.ADMIN_EMAIL) {
       return res
         .status(403)
-        .json({
-          error: `Unauthorized. Your email is ${req.user.email}, but ADMIN_EMAIL is ${process.env.ADMIN_EMAIL}`,
-        });
+        .json({ error: `Unauthorized. Your email is ${req.user.email}.` });
     }
 
-    // 2. Get or create the current cycle
     let currentCycle = await Cycle.findOne({ status: "open" });
     if (!currentCycle) {
       currentCycle = await Cycle.create({
@@ -41,19 +38,23 @@ router.post("/reset-cycle", requireAuth, async (req, res) => {
       });
     }
 
-    // 3. Aggregate the votes
     const voteAggregation = await Vote.aggregate([
       { $match: { cycleId: currentCycle.cycleId } },
       { $group: { _id: "$trackId", totalVotes: { $sum: 1 } } },
     ]);
 
-    // 4. Fetch track and artist details for the snapshot
     const snapshotResults = [];
     let rank = 1;
 
     voteAggregation.sort((a, b) => b.totalVotes - a.totalVotes);
 
     for (const item of voteAggregation) {
+      // 🚨 FIX: Skip old mock votes (like "trk_01") that are not valid MongoDB ObjectIds
+      if (!mongoose.Types.ObjectId.isValid(item._id)) {
+        console.log(`Skipping invalid track ID: ${item._id}`);
+        continue;
+      }
+
       const track = await Track.findById(item._id).populate("artistId");
       if (track) {
         snapshotResults.push({
@@ -66,18 +67,15 @@ router.post("/reset-cycle", requireAuth, async (req, res) => {
       }
     }
 
-    // 5. Save to CertifiedResults
     await CertifiedResult.create({
       cycleId: currentCycle.cycleId,
       weekNumber: currentCycle.weekNumber,
       results: snapshotResults,
     });
 
-    // 6. Close the current cycle
     currentCycle.status = "closed";
     await currentCycle.save();
 
-    // 7. Create the new cycle
     const nextWeekNumber = currentCycle.weekNumber + 1;
     const nextCycleId = `baze_wk${nextWeekNumber}_kenya`;
 
@@ -85,10 +83,12 @@ router.post("/reset-cycle", requireAuth, async (req, res) => {
       cycleId: nextCycleId,
       weekNumber: nextWeekNumber,
       startsAt: new Date(),
-      endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
-    // 8. Reset all users' votes back to 10
+    // 🚨 FIX: Delete all old votes so they don't pollute future weeks
+    await Vote.deleteMany({});
+
     await User.updateMany({}, { $set: { votesRemaining: 10 } });
 
     res.json({
@@ -97,7 +97,6 @@ router.post("/reset-cycle", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("Reset cycle error:", err);
-    // Send the exact error to the frontend so we can see it
     res.status(500).json({ error: err.message || "Failed to reset cycle" });
   }
 });
