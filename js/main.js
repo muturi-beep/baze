@@ -73,6 +73,9 @@ checkAuth()
   .finally(() => {
     start(document.getElementById("app"));
   });
-route("/dashboard", () => DashboardView());
+
+route("/dashboard", function () {
+  return DashboardView();
+});
 
 start(document.getElementById("app"));
