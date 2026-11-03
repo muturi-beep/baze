@@ -123,6 +123,12 @@ async function run() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("✅ Connected to MongoDB");
 
+    // 🚨 WIPE OLD DATA SO WE DON'T GET DUPLICATES
+    await Track.deleteMany({});
+    await Album.deleteMany({});
+    await Artist.deleteMany({});
+    console.log("🧹 Cleared old mock data");
+
     // Add the artists you want to seed here
     const artistsToSeed = [
       "Sauti Sol",
@@ -134,7 +140,7 @@ async function run() {
 
     for (const name of artistsToSeed) {
       await seedArtist(name);
-      await sleep(1000); // Extra pause between artists to be safe
+      await sleep(1000);
     }
 
     console.log("\n🎉 Seeding complete!");
