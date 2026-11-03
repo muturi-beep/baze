@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 const certifiedResultSchema = new mongoose.Schema({
   cycleId: { type: String, required: true },
   weekNumber: { type: Number, required: true },
@@ -14,5 +13,4 @@ const certifiedResultSchema = new mongoose.Schema({
     },
   ],
 });
-
 export default mongoose.model("CertifiedResult", certifiedResultSchema);
