@@ -25,4 +25,22 @@ router.get("/", async (req, res) => {
   }
 });
 
+import CertifiedResult from "../models/CertifiedResult.js"; // <-- Add this import at the top
+
+// ... (your existing / route)
+
+// NEW: Get all past certified results
+router.get("/results", async (req, res) => {
+  try {
+    // Fetch results, sorted by most recent week first
+    const results = await CertifiedResult.find()
+      .sort({ weekNumber: -1 })
+      .lean();
+    res.json({ results });
+  } catch (err) {
+    console.error("Failed to load results:", err);
+    res.status(500).json({ error: "Failed to load results" });
+  }
+});
+
 export default router;

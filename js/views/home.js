@@ -68,6 +68,34 @@ export function HomeView() {
     el.appendChild(cycleBanner(s.cycle));
     el.appendChild(genreChips(getGenres(), currentGenreId, setGenre));
 
+    // --- HALL OF FAME LINK ---
+    el.appendChild(
+      h(
+        "div",
+        { style: { marginBottom: "24px", textAlign: "center" } },
+        h(
+          "a",
+          {
+            href: "#/results",
+            style: {
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px 16px",
+              background: "rgba(255, 138, 61, 0.1)",
+              border: "1px solid var(--accent)",
+              borderRadius: "999px",
+              color: "var(--accent)",
+              fontSize: "13px",
+              fontWeight: "600",
+              textDecoration: "none",
+            },
+          },
+          "🏆 View Hall of Fame",
+        ),
+      ),
+    );
+
     // ---- Trending now ----
     var trendingHeading = genre ? "Trending in " + genre.name : "Trending now";
     var seeBoardHref = currentGenreId

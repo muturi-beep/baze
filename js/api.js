@@ -48,6 +48,7 @@ export const api = {
     }),
   getLeaderboard: () => request("/leaderboard"),
   getCatalog: () => request("/catalog"),
+  getResults: () => request("/catalog/results"),
 
   // Admin endpoints
   addTrack: (data) =>
