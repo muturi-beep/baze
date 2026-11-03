@@ -49,10 +49,14 @@ export const api = {
   getLeaderboard: () => request("/leaderboard"),
   getCatalog: () => request("/catalog"),
 
-  // NEW: Admin endpoint to add tracks
+  // Admin endpoints
   addTrack: (data) =>
     request("/admin/add-track", {
       method: "POST",
       body: JSON.stringify(data),
+    }),
+  resetCycle: () =>
+    request("/admin/reset-cycle", {
+      method: "POST",
     }),
 };

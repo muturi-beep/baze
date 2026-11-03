@@ -23,7 +23,7 @@ export function AdminView() {
         { "aria-label": "back", onClick: () => (location.hash = "#/") },
         "←",
       ),
-      h("h1", {}, "Admin: Add Music"),
+      h("h1", {}, "Admin Dashboard"),
       h("span"),
     ),
   );
@@ -87,6 +87,70 @@ export function AdminView() {
   );
 
   el.appendChild(form);
+
+  // --- DANGER ZONE (WEEKLY RESET) ---
+  el.appendChild(
+    h(
+      "div",
+      {
+        style: {
+          marginTop: "64px",
+          padding: "24px",
+          border: "1px solid var(--danger)",
+          borderRadius: "12px",
+          background: "rgba(255, 92, 108, 0.05)",
+        },
+      },
+      h(
+        "h3",
+        {
+          style: {
+            color: "var(--danger)",
+            marginTop: "0",
+            marginBottom: "8px",
+          },
+        },
+        "⚠️ Danger Zone",
+      ),
+      h(
+        "p",
+        {
+          class: "muted",
+          style: { fontSize: "14px", marginBottom: "16px", lineHeight: "1.5" },
+        },
+        "Ending the week will freeze the current leaderboard, save the results to the archive, reset all fan votes back to 10, and start the next week. This cannot be undone.",
+      ),
+      h(
+        "button",
+        {
+          class: "claim-primary",
+          style: { background: "var(--danger)", color: "#fff", marginTop: "0" },
+          onClick: async (e) => {
+            if (
+              !confirm(
+                "Are you absolutely sure? This will end the week and reset all votes.",
+              )
+            )
+              return;
+            const btn = e.target;
+            btn.textContent = "Resetting...";
+            btn.disabled = true;
+            try {
+              const res = await api.resetCycle();
+              showToast(res.message || "Week reset successful!");
+              // Force reload to fetch the new cycle data
+              window.location.reload();
+            } catch (err) {
+              showToast(err.message || "Failed to reset cycle");
+              btn.textContent = "End Week & Reset Votes";
+              btn.disabled = false;
+            }
+          },
+        },
+        "End Week & Reset Votes",
+      ),
+    ),
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();

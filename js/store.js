@@ -98,7 +98,8 @@ function buildEmptyLeaderboard() {
     rank: 0,
     votedByMe: false,
   }));
-  state.leaderboard[CYCLE.id] = assignRanks(board);
+  // Use state.cycle.id instead of hardcoded CYCLE.id
+  state.leaderboard[state.cycle.id] = assignRanks(board);
   update({ leaderboard: state.leaderboard });
 }
 
@@ -128,20 +129,30 @@ export function getBoard(cycleId) {
 export async function syncLeaderboard() {
   try {
     if (catalog.tracks.length === 0) await syncCatalog();
-    if (
-      !state.leaderboard[CYCLE.id] ||
-      state.leaderboard[CYCLE.id].length === 0
-    )
-      buildEmptyLeaderboard();
 
     let data = { counts: {}, myVotes: [], votesRemaining: 10 };
     try {
       data = await api.getLeaderboard();
+
+      // 1. Update the local state cycle with the real dates from the database!
+      if (data.cycle) {
+        state.cycle.id = data.cycle.id;
+        state.cycle.weekNumber = data.cycle.weekNumber;
+        state.cycle.endsAt = data.cycle.endsAt;
+      }
     } catch (err) {
       console.error("⚠️ Vote count failed, showing tracks with 0 votes", err);
     }
 
-    var board = state.leaderboard[CYCLE.id] || [];
+    // 2. Ensure we have a board for the CURRENT active cycle
+    if (
+      !state.leaderboard[state.cycle.id] ||
+      state.leaderboard[state.cycle.id].length === 0
+    ) {
+      buildEmptyLeaderboard();
+    }
+
+    var board = state.leaderboard[state.cycle.id] || [];
     var merged = board.map((e) => {
       var dbVotes = (data.counts && data.counts[e.trackId]) || 0;
       return Object.assign({}, e, {
@@ -152,7 +163,10 @@ export async function syncLeaderboard() {
     });
 
     update({
-      leaderboard: { ...state.leaderboard, [CYCLE.id]: assignRanks(merged) },
+      leaderboard: {
+        ...state.leaderboard,
+        [state.cycle.id]: assignRanks(merged),
+      },
       user: { ...state.user, votesRemaining: data.votesRemaining || 10 },
     });
   } catch (err) {
