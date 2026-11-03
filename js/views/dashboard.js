@@ -24,7 +24,7 @@ export function DashboardView() {
 
   var artist = getArtist(s.claimedArtistId);
   var totals = getArtistTotals(s.cycle.id, s.claimedArtistId);
-  var topTrack = totals.tracks[0]; // Highest voted track
+  var topTrack = totals.tracks[0];
 
   function render() {
     el.innerHTML = "";
@@ -43,7 +43,6 @@ export function DashboardView() {
       ),
     );
 
-    // --- HERO SECTION ---
     el.appendChild(
       h(
         "div",
@@ -51,7 +50,7 @@ export function DashboardView() {
         h(
           "h2",
           { style: { fontSize: "28px", margin: "0 0 8px" } },
-          artist.name,
+          artist ? artist.name : "Artist",
         ),
         h(
           "span",
@@ -72,7 +71,6 @@ export function DashboardView() {
       ),
     );
 
-    // --- STATS GRID ---
     el.appendChild(
       h(
         "div",
@@ -96,7 +94,6 @@ export function DashboardView() {
       ),
     );
 
-    // --- SHARE CARD (Only if they have votes) ---
     if (topTrack) {
       el.appendChild(
         h(
@@ -176,7 +173,6 @@ export function DashboardView() {
       );
     }
 
-    // --- ALL TRACKS LIST ---
     if (totals.tracks.length > 0) {
       el.appendChild(
         h(
@@ -236,7 +232,6 @@ export function DashboardView() {
         })
         .catch(() => {});
     } else {
-      // Fallback for desktop
       navigator.clipboard.writeText(text + " " + url);
       showToast("Share link copied to clipboard!");
     }
