@@ -17,6 +17,7 @@ import { MeView } from "./views/me.js";
 import { ClaimView } from "./views/claim.js";
 import { RankingExplainedView } from "./views/rankingExplained.js";
 import { LoginView } from "./views/login.js";
+import { DashboardView } from "./views/dashboard.js";
 
 route("/", function () {
   return HomeView();
@@ -72,5 +73,6 @@ checkAuth()
   .finally(() => {
     start(document.getElementById("app"));
   });
+route("/dashboard", () => DashboardView());
 
 start(document.getElementById("app"));

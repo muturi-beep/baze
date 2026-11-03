@@ -149,9 +149,17 @@ export function MeView() {
         settingsItem("ℹ️", "How ranking works", function () {
           location.hash = "#/ranking-explained";
         }),
-        settingsItem("🏆", "Claim an artist profile", function () {
-          location.hash = "#/claim";
-        }),
+
+        // --- NEW DASHBOARD LINK ---
+        s.claimedArtistId
+          ? settingsItem("📊", "Artist Dashboard", function () {
+              location.hash = "#/dashboard";
+            })
+          : settingsItem("🏆", "Claim an artist profile", function () {
+              location.hash = "#/claim";
+            }),
+        // ---------------------------
+
         settingsItem("❓", "Help & support", function () {
           showToast("Support coming soon");
         }),
