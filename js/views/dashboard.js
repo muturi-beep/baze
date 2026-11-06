@@ -221,7 +221,8 @@ export function DashboardView() {
 
   function shareRank(trackEntry) {
     var text = `I'm currently #${trackEntry.rank} on Baze with "${trackEntry.track.title}"! Vote for me here:`;
-    var url = window.location.origin + "/#/track/" + trackEntry.trackId;
+    // Use the clean /share/ URL
+    var url = window.location.origin + "/share/track/" + trackEntry.trackId;
 
     if (navigator.share) {
       navigator

@@ -291,8 +291,10 @@ export function TrackView(params) {
   }
 
   function handleShare() {
-    var url = location.href;
+    // Use the clean /share/ URL instead of the #/ URL
+    var url = window.location.origin + "/share/track/" + trackId;
     var track = getTrack(trackId);
+
     if (navigator.share) {
       navigator
         .share({ url: url, title: track ? track.title : "Track" })
