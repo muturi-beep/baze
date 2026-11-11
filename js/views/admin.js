@@ -6,7 +6,9 @@ import { api } from "../api.js";
 export function AdminView() {
   const el = h("main", { class: "screen admin-screen" });
   const s = getState();
+
   let allTracks = [];
+  let pendingClaims = [];
   let isLoadingTracks = true;
 
   if (!s.user.verified) {
@@ -90,11 +92,15 @@ export function AdminView() {
   );
   el.appendChild(form);
 
-  // 2. MANAGE TRACKS LIST
+  // 2. PENDING CLAIMS LIST
+  const claimsWrap = h("div", { style: { marginTop: "48px" } });
+  el.appendChild(claimsWrap);
+
+  // 3. MANAGE TRACKS LIST
   const trackListWrap = h("div", { style: { marginTop: "48px" } });
   el.appendChild(trackListWrap);
 
-  // 3. DANGER ZONE
+  // 4. DANGER ZONE
   el.appendChild(
     h(
       "div",
@@ -157,7 +163,110 @@ export function AdminView() {
     ),
   );
 
-  // --- LOGIC ---
+  // --- LOGIC: CLAIMS ---
+  async function loadClaims() {
+    try {
+      const data = await api.getPendingClaims();
+      pendingClaims = data.claims || [];
+      renderClaimsList();
+    } catch (err) {
+      console.error("Failed to load claims", err);
+      claimsWrap.innerHTML =
+        "<p class='muted'>Failed to load pending claims.</p>";
+    }
+  }
+
+  function renderClaimsList() {
+    claimsWrap.innerHTML = "";
+    claimsWrap.appendChild(
+      h(
+        "h2",
+        { style: { fontSize: "18px", marginBottom: "16px" } },
+        "Pending Artist Claims",
+      ),
+    );
+
+    if (pendingClaims.length === 0) {
+      claimsWrap.appendChild(
+        h("p", { class: "muted" }, "No pending claims right now."),
+      );
+      return;
+    }
+
+    const list = h("div", {
+      style: { display: "flex", flexDirection: "column", gap: "8px" },
+    });
+
+    pendingClaims.forEach((claim) => {
+      list.appendChild(
+        h(
+          "div",
+          {
+            style: {
+              padding: "16px",
+              background: "var(--bg-elev)",
+              border: "1px solid var(--border)",
+              borderRadius: "8px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            },
+          },
+          h(
+            "div",
+            {},
+            h(
+              "div",
+              { style: { fontWeight: "700", fontSize: "15px" } },
+              `Claim: ${claim.artistName}`,
+            ),
+            h(
+              "div",
+              {
+                style: {
+                  fontSize: "13px",
+                  color: "var(--text-muted)",
+                  marginTop: "4px",
+                },
+              },
+              `User: ${claim.userId.email} | Contact: ${claim.contactInfo}`,
+            ),
+          ),
+          h(
+            "button",
+            {
+              style: {
+                background: "var(--success)",
+                color: "#0b0b0f",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                border: "none",
+                fontWeight: "700",
+                cursor: "pointer",
+              },
+              onClick: async (e) => {
+                e.target.textContent = "Approving...";
+                e.target.disabled = true;
+                try {
+                  await api.approveClaim(claim._id);
+                  showToast("Claim approved successfully!");
+                  loadClaims(); // Refresh list
+                } catch (err) {
+                  showToast("Failed to approve claim");
+                  e.target.textContent = "Approve";
+                  e.target.disabled = false;
+                }
+              },
+            },
+            "Approve",
+          ),
+        ),
+      );
+    });
+    claimsWrap.appendChild(list);
+  }
+
+  // --- LOGIC: TRACKS ---
   async function loadTracks() {
     try {
       const data = await api.getAdminTracks();
@@ -281,13 +390,13 @@ export function AdminView() {
 
   async function handleEdit(track) {
     const newTitle = prompt("Edit Track Title:", track.title);
-    if (newTitle === null) return; // Cancelled
+    if (newTitle === null) return;
 
     const newYt = prompt(
       "Edit YouTube ID (or leave blank):",
       track.youtubeVideoId || "",
     );
-    if (newYt === null) return; // Cancelled
+    if (newYt === null) return;
 
     try {
       await api.updateTrack(track._id, {
@@ -295,8 +404,8 @@ export function AdminView() {
         youtubeVideoId: newYt,
       });
       showToast("Track updated");
-      await syncCatalog(); // Update the global frontend catalog
-      loadTracks(); // Refresh local admin list
+      await syncCatalog();
+      loadTracks();
     } catch (err) {
       showToast("Failed to update track");
     }
@@ -340,7 +449,7 @@ export function AdminView() {
       showToast("Track published successfully!");
       form.reset();
       await syncCatalog();
-      loadTracks(); // Refresh the list below
+      loadTracks();
     } catch (err) {
       showToast(err.message || "Failed to publish track");
     } finally {
@@ -360,6 +469,7 @@ export function AdminView() {
   }
 
   // Initial Load
+  loadClaims();
   loadTracks();
 
   return { el, destroy: () => {} };
