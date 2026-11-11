@@ -10,13 +10,20 @@ router.get("/", async (req, res) => {
   try {
     res.set("Cache-Control", "no-store, max-age=0");
 
-    // 🚨 THE FIX: Exclude remixes, instrumentals, and live versions
-    const tracks = await Track.find({
-      title: { $not: /remix|instrumental|live|edit|version|reprise|mix/i },
-    })
+    // 1. Fetch ALL tracks from the database
+    const allTracks = await Track.find()
       .populate("artistId", "name imageUrl claimedBy")
       .populate("albumId", "title artworkUrl")
       .lean();
+
+    // 2. Filter out remixes and instrumentals in plain JavaScript
+    const tracks = allTracks.filter((t) => {
+      const title = t.title.toLowerCase();
+      const isRemix = /remix|instrumental|live|edit|version|reprise|mix/i.test(
+        title,
+      );
+      return !isRemix;
+    });
 
     const artists = await Artist.find().lean();
     const albums = await Album.find().lean();
