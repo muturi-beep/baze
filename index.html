@@ -10,12 +10,6 @@
     <meta name="theme-color" content="#0b0b0f" />
     <link rel="apple-touch-icon" href="/icon.png" />
     <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <div class="app-shell" id="app"></div>
-    <div id="toast-root"></div>
-    <script type="module" src="js/main.js"></script>
-
     <script>
       let deferredPrompt;
       window.addEventListener("beforeinstallprompt", (e) => {
@@ -47,5 +41,10 @@
         }
       };
     </script>
+  </head>
+  <body>
+    <div class="app-shell" id="app"></div>
+    <div id="toast-root"></div>
+    <script type="module" src="js/main.js"></script>
   </body>
 </html>
