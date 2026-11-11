@@ -11,6 +11,7 @@ import voteRoutes from "./routes/votes.js";
 import leaderboardRoutes from "./routes/leaderboard.js";
 import catalogRoutes from "./routes/catalog.js";
 import shareRoutes from "./routes/share.js";
+import reportRoutes from "./routes/reports.js";
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use("/v1/leaderboard", leaderboardRoutes);
 app.use("/v1/catalog", catalogRoutes);
 app.use("/v1/admin", adminRoutes);
 app.use("/share", shareRoutes);
+app.use("/v1/reports", reportRoutes);
 
 app.get("/", (req, res) => res.json({ message: "Baze API is running." }));
 

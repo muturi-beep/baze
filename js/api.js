@@ -60,4 +60,11 @@ export const api = {
     request("/admin/reset-cycle", {
       method: "POST",
     }),
+
+  // NEW: Report endpoint
+  submitReport: (data) =>
+    request("/reports", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
