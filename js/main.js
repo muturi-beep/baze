@@ -1,3 +1,7 @@
+import { inject } from "@vercel/analytics";
+inject(); // <-- This turns on the tracking
+
+import { route, start } from "./router.js";
 import { AdminView } from "./views/admin.js";
 import { checkAuth } from "./store.js";
 import { route, start } from "./router.js";
@@ -19,9 +23,6 @@ import { RankingExplainedView } from "./views/rankingExplained.js";
 import { LoginView } from "./views/login.js";
 import { DashboardView } from "./views/dashboard.js";
 import { ReportView } from "./views/report.js";
-import { inject } from "@vercel/analytics";
-inject(); // <-- This turns on the tracking
-import { route, start } from "./router.js";
 
 route("/", function () {
   return HomeView();

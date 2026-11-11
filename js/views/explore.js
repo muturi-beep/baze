@@ -1,13 +1,13 @@
 import { h } from "../dom.js";
 import { subscribe, getState, getBoard, getArtists } from "../store.js";
+// FIXED: Removed the bad 'getGenre' import
 import {
   exploreCard,
   emptyState,
   bottomNav,
   genreChips,
-  getGenre,
 } from "../components.js";
-import { GENRES } from "../data.js"; // Import GENRES for the filter
+import { GENRES } from "../data.js";
 
 export function ExploreView() {
   var el = h("main", { class: "screen explore" });
@@ -228,13 +228,4 @@ export function ExploreView() {
   refreshResults();
 
   return { el: el, destroy: unsub };
-}
-
-function claimBanner() {
-  return h(
-    "a",
-    { class: "claim-banner", href: "#/claim" },
-    h("span", { class: "claim-title" }, "Are you an artist?"),
-    h("span", { class: "claim-sub" }, "Claim your profile →"),
-  );
 }
