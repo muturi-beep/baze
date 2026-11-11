@@ -1,9 +1,6 @@
 import { inject } from "@vercel/analytics";
-inject(); // <-- This turns on the tracking
+inject();
 
-import { route, start } from "./router.js";
-import { AdminView } from "./views/admin.js";
-import { checkAuth } from "./store.js";
 import { route, start } from "./router.js";
 import { HomeView } from "./views/home.js";
 import { TrackView } from "./views/track.js";
@@ -14,13 +11,11 @@ import { ExploreView } from "./views/explore.js";
 import { GenreView } from "./views/genre.js";
 import { AlbumsView } from "./views/albums.js";
 import { AlbumView } from "./views/album.js";
-import { ProducersView } from "./views/producers.js";
-import { ProducerView } from "./views/producer.js";
 import { ArtistView } from "./views/artist.js";
 import { MeView } from "./views/me.js";
 import { ClaimView } from "./views/claim.js";
 import { RankingExplainedView } from "./views/rankingExplained.js";
-import { LoginView } from "./views/login.js";
+import { AdminView } from "./views/admin.js";
 import { DashboardView } from "./views/dashboard.js";
 import { ReportView } from "./views/report.js";
 
@@ -51,12 +46,6 @@ route("/albums", function () {
 route("/album/:albumId", function (p) {
   return AlbumView(p);
 });
-route("/producers", function () {
-  return ProducersView();
-});
-route("/producer/:producerId", function (p) {
-  return ProducerView(p);
-});
 route("/artist/:artistId", function (p) {
   return ArtistView(p);
 });
@@ -69,20 +58,12 @@ route("/claim", function () {
 route("/ranking-explained", function () {
   return RankingExplainedView();
 });
-route("/login", function () {
-  return LoginView();
+route("/admin", function () {
+  return AdminView();
 });
-route("/admin", () => AdminView());
-checkAuth()
-  .catch((err) => console.error("Auth check bypassed:", err))
-  .finally(() => {
-    start(document.getElementById("app"));
-  });
-
 route("/dashboard", function () {
   return DashboardView();
 });
-
 route("/report/:trackId", function (p) {
   return ReportView(p);
 });
