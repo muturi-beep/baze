@@ -1,6 +1,3 @@
-import { inject } from "@vercel/analytics";
-inject();
-
 import { route, start } from "./router.js";
 import { HomeView } from "./views/home.js";
 import { TrackView } from "./views/track.js";
