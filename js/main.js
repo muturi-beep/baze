@@ -65,4 +65,5 @@ route("/report/:trackId", function (p) {
   return ReportView(p);
 });
 
+// Start the app
 start(document.getElementById("app"));
