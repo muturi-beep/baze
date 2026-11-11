@@ -10,28 +10,35 @@ router.get("/", async (req, res) => {
   try {
     res.set("Cache-Control", "no-store, max-age=0");
 
-    // 1. Fetch ALL tracks from the database
     const allTracks = await Track.find()
       .populate("artistId", "name imageUrl claimedBy")
       .populate("albumId", "title artworkUrl")
       .lean();
 
-    // 2. Filter out remixes and instrumentals in plain JavaScript
     const tracks = allTracks.filter((t) => {
+      if (!t.title) return true;
       const title = t.title.toLowerCase();
-      const isRemix = /remix|instrumental|live|edit|version|reprise|mix/i.test(
-        title,
-      );
+      // Use word boundaries (\b) so it doesn't accidentally filter out normal words
+      const isRemix =
+        /\b(remix|instrumental|live|edit|version|reprise|mix)\b/i.test(title);
       return !isRemix;
     });
 
     const artists = await Artist.find().lean();
     const albums = await Album.find().lean();
 
-    res.json({ tracks, artists, albums });
+    res.json({
+      debug: {
+        totalTracksInDB: allTracks.length,
+        tracksAfterFilter: tracks.length,
+      },
+      tracks,
+      artists,
+      albums,
+    });
   } catch (err) {
     console.error("Catalog fetch error:", err);
-    res.status(500).json({ error: "Failed to load catalog" });
+    res.status(500).json({ error: err.message });
   }
 });
 
