@@ -1816,3 +1816,58 @@ textarea.claim-input {
   text-align: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
+
+/* Explore Page Polish */
+.trending-artists-wrap {
+  margin-bottom: 24px;
+}
+.explore-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+.explore-section-head h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.trending-artist-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+.trending-artist-row::-webkit-scrollbar {
+  display: none;
+}
+.trending-artist-card {
+  flex: 0 0 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.trending-artist-card img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 8px;
+  border: 2px solid var(--border);
+}
+.trending-artist-card .artist-name {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.trending-artist-card .artist-votes {
+  color: var(--accent);
+  font-size: 11px;
+}
+.explore-genre-filter .genre-chips {
+  margin-bottom: 16px;
+}

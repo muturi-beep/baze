@@ -1,51 +1,64 @@
 import { h } from "../dom.js";
+import { subscribe, getState, getBoard, getArtists } from "../store.js";
 import {
-  subscribe,
-  getState,
-  getBoard,
-  getClaimedArtistId,
-  getClaimedArtist,
-} from "../store.js";
-import { exploreCard, emptyState, bottomNav } from "../components.js";
+  exploreCard,
+  emptyState,
+  bottomNav,
+  genreChips,
+  getGenre,
+} from "../components.js";
+import { GENRES } from "../data.js"; // Import GENRES for the filter
 
 export function ExploreView() {
   var el = h("main", { class: "screen explore" });
   var query = "";
   var filter = "all"; // "all" | "unvoted"
+  var currentGenreId = null;
+
+  // Calculate trending artists based on total votes
+  function getTrendingArtists(s) {
+    var board = getBoard(s.cycle.id);
+    var artistVotes = {};
+
+    board.forEach(function (e) {
+      if (e.track && e.track.artistId && e.votes > 0) {
+        var aid = e.track.artistId._id || e.track.artistId;
+        artistVotes[aid] = (artistVotes[aid] || 0) + e.votes;
+      }
+    });
+
+    var artists = getArtists();
+    return artists
+      .map(function (a) {
+        return { ...a, totalVotes: artistVotes[a._id] || 0 };
+      })
+      .sort(function (a, b) {
+        return b.totalVotes - a.totalVotes;
+      })
+      .slice(0, 6); // Top 6 artists
+  }
 
   /* ---------- persistent shell (built once) ---------- */
   var searchInput = h("input", {
     type: "search",
     class: "explore-search",
-    placeholder: "Search tracks or artists",
+    placeholder: "Search tracks, artists, or albums",
     autocomplete: "off",
-    "aria-label": "Search tracks or artists",
+    "aria-label": "Search tracks, artists, or albums",
   });
 
   var allTab = h(
     "button",
-    {
-      role: "tab",
-      type: "button",
-      onClick: function () {
-        setFilter("all");
-      },
-    },
+    { role: "tab", type: "button", onClick: () => setFilter("all") },
     "All tracks",
   );
-
   var unvotedTab = h(
     "button",
-    {
-      role: "tab",
-      type: "button",
-      onClick: function () {
-        setFilter("unvoted");
-      },
-    },
+    { role: "tab", type: "button", onClick: () => setFilter("unvoted") },
     "Unvoted",
   );
 
+  var trendingWrap = h("div", { class: "trending-artists-wrap" });
   var resultsWrap = h("div", { class: "explore-results" });
 
   el.appendChild(
@@ -54,12 +67,7 @@ export function ExploreView() {
       { class: "topbar" },
       h(
         "button",
-        {
-          "aria-label": "back",
-          onClick: function () {
-            location.hash = "#/";
-          },
-        },
+        { "aria-label": "back", onClick: () => (location.hash = "#/") },
         "←",
       ),
       h("h1", {}, "Explore"),
@@ -76,6 +84,8 @@ export function ExploreView() {
     ),
   );
 
+  el.appendChild(trendingWrap);
+
   el.appendChild(
     h(
       "div",
@@ -85,8 +95,10 @@ export function ExploreView() {
     ),
   );
 
+  // Genre Filter Chips
+  var genreFilterWrap = h("div", { class: "explore-genre-filter" });
+  el.appendChild(genreFilterWrap);
   el.appendChild(resultsWrap);
-  el.appendChild(claimBanner());
   el.appendChild(bottomNav("explore"));
 
   /* ---------- behavior ---------- */
@@ -101,6 +113,12 @@ export function ExploreView() {
     refreshResults();
   }
 
+  function setGenre(id) {
+    currentGenreId = id;
+    buildGenreChips();
+    refreshResults();
+  }
+
   function updateTabs() {
     allTab.className = filter === "all" ? "active" : "";
     allTab.setAttribute("aria-selected", String(filter === "all"));
@@ -108,21 +126,69 @@ export function ExploreView() {
     unvotedTab.setAttribute("aria-selected", String(filter === "unvoted"));
   }
 
+  function buildGenreChips() {
+    genreFilterWrap.innerHTML = "";
+    genreFilterWrap.appendChild(genreChips(GENRES, currentGenreId, setGenre));
+  }
+
   function matchesQuery(entry, q) {
     if (!q) return true;
     var needle = q.toLowerCase();
+    var title = entry.track.title.toLowerCase();
+    var artist = (entry.track.artist?.name || "").toLowerCase();
+    var album = (entry.track.album?.title || "").toLowerCase();
+
     return (
-      entry.track.title.toLowerCase().indexOf(needle) !== -1 ||
-      entry.track.artist.name.toLowerCase().indexOf(needle) !== -1
+      title.indexOf(needle) !== -1 ||
+      artist.indexOf(needle) !== -1 ||
+      album.indexOf(needle) !== -1
     );
   }
 
   function refreshResults() {
     var s = getState();
-    var entries = getBoard(s.cycle.id);
 
+    // 1. Build Trending Artists
+    var trending = getTrendingArtists(s);
+    trendingWrap.innerHTML = "";
+    if (trending.length > 0 && !query) {
+      trendingWrap.appendChild(
+        h(
+          "div",
+          { class: "explore-section-head" },
+          h("h2", {}, "🔥 Trending Artists"),
+          h("a", { href: "#/leaderboard", class: "see-all" }, "See all"),
+        ),
+      );
+      var scrollRow = h("div", { class: "trending-artist-row" });
+      trending.forEach(function (a) {
+        var fallbackImg = "https://picsum.photos/seed/" + a._id + "/200";
+        scrollRow.appendChild(
+          h(
+            "a",
+            { href: "#/artist/" + a._id, class: "trending-artist-card" },
+            h("img", {
+              src: a.imageUrl || fallbackImg,
+              alt: "",
+              onError: (e) => (e.target.src = fallbackImg),
+            }),
+            h("span", { class: "artist-name" }, a.name),
+            h(
+              "span",
+              { class: "artist-votes" },
+              a.totalVotes.toLocaleString() + " votes",
+            ),
+          ),
+        );
+      });
+      trendingWrap.appendChild(scrollRow);
+    }
+
+    // 2. Filter Tracks
+    var entries = getBoard(s.cycle.id);
     var filtered = entries.filter(function (e) {
       if (filter === "unvoted" && e.votedByMe) return false;
+      if (currentGenreId && e.track.genre !== currentGenreId) return false;
       return matchesQuery(e, query);
     });
 
@@ -150,12 +216,14 @@ export function ExploreView() {
 
   function emptyMessage() {
     if (query) return 'No tracks match "' + query + '".';
-    if (filter === "unvoted") return "You've voted for everything this week.";
-    return "No tracks in this cycle yet.";
+    if (filter === "unvoted")
+      return "You've voted for everything in this category.";
+    return "No tracks found.";
   }
 
   /* ---------- lifecycle ---------- */
   updateTabs();
+  buildGenreChips();
   var unsub = subscribe(refreshResults);
   refreshResults();
 
@@ -163,20 +231,6 @@ export function ExploreView() {
 }
 
 function claimBanner() {
-  var claimedId = getClaimedArtistId();
-  if (claimedId) {
-    var artist = getClaimedArtist();
-    return h(
-      "a",
-      { class: "claim-banner", href: "#/artist/" + claimedId },
-      h("span", { class: "claim-title" }, "You're verified"),
-      h(
-        "span",
-        { class: "claim-sub" },
-        (artist ? artist.name : "View profile") + " →",
-      ),
-    );
-  }
   return h(
     "a",
     { class: "claim-banner", href: "#/claim" },
