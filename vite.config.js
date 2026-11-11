@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icon.png"],
+      includeAssets: ["icon.svg"],
       manifest: {
         name: "Baze - Vote for the Bangers",
         short_name: "Baze",

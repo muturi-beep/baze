@@ -1,4 +1,5 @@
 import { route, start } from "./router.js";
+import { checkAuth } from "./store.js"; // <--- Add this import
 import { HomeView } from "./views/home.js";
 import { TrackView } from "./views/track.js";
 import { LeaderboardView } from "./views/leaderboard.js";
@@ -65,5 +66,9 @@ route("/report/:trackId", function (p) {
   return ReportView(p);
 });
 
-// Start the app
-start(document.getElementById("app"));
+// 🚨 FIX: Fetch data BEFORE starting the app
+checkAuth()
+  .catch((err) => console.error("Auth check bypassed:", err))
+  .finally(() => {
+    start(document.getElementById("app"));
+  });
