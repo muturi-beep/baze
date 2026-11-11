@@ -15,18 +15,28 @@
       window.addEventListener("beforeinstallprompt", (e) => {
         e.preventDefault();
         deferredPrompt = e;
+        console.log("✅ Chrome is ready to install the app!");
       });
 
       window.installPWA = async () => {
+        // Check if the app is already running as an installed app
+        const isStandalone =
+          window.matchMedia("(display-mode: standalone)").matches ||
+          window.navigator.standalone;
+
+        if (isStandalone) {
+          alert("You are already using the installed Baze App!");
+          return;
+        }
+
         if (deferredPrompt) {
           deferredPrompt.prompt();
           const { outcome } = await deferredPrompt.userChoice;
           if (outcome === "accepted") {
-            console.log("User accepted the install prompt");
+            deferredPrompt = null;
           }
-          deferredPrompt = null;
         } else {
-          // Fallback for iOS or if the prompt didn't trigger
+          // If Chrome hasn't given us the prompt yet, tell the user to use the menu
           const isIOS =
             /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
           if (isIOS) {
@@ -35,7 +45,7 @@
             );
           } else {
             alert(
-              "To install:\n\n1. Tap the 3 dots in the top right corner of your browser.\n2. Tap 'Install App' or 'Add to Home Screen'.",
+              "Chrome is holding the install prompt.\n\n1. Scroll up and down on the Home page for 30 seconds.\n2. Tap the 3-dot menu and select 'Add to Home Screen'.\n3. Or uninstall the app if you already installed it.",
             );
           }
         }
