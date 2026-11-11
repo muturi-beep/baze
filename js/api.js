@@ -61,6 +61,15 @@ export const api = {
       method: "POST",
     }),
 
+  // Admin Track Management
+  getAdminTracks: () => request("/admin/tracks"),
+  deleteTrack: (id) => request(`/admin/tracks/${id}`, { method: "DELETE" }),
+  updateTrack: (id, data) =>
+    request(`/admin/tracks/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
   // NEW: Report endpoint
   submitReport: (data) =>
     request("/reports", {

@@ -6,6 +6,8 @@ import { api } from "../api.js";
 export function AdminView() {
   const el = h("main", { class: "screen admin-screen" });
   const s = getState();
+  let allTracks = [];
+  let isLoadingTracks = true;
 
   if (!s.user.verified) {
     el.appendChild(
@@ -14,6 +16,7 @@ export function AdminView() {
     return { el, destroy: () => {} };
   }
 
+  // --- UI SHELL ---
   el.appendChild(
     h(
       "header",
@@ -28,9 +31,15 @@ export function AdminView() {
     ),
   );
 
+  // 1. ADD TRACK FORM
   const form = h(
     "form",
     { class: "admin-form", onSubmit: handleSubmit },
+    h(
+      "h2",
+      { style: { fontSize: "18px", marginBottom: "16px" } },
+      "Add New Track",
+    ),
     field(
       "Song Title",
       h("input", { name: "title", required: true, class: "claim-input" }),
@@ -51,11 +60,6 @@ export function AdminView() {
         class: "claim-input",
         placeholder: "Paste full link or ID",
       }),
-      h(
-        "span",
-        { class: "claim-field-hint" },
-        "We will extract the ID automatically",
-      ),
     ),
     field(
       "Genre",
@@ -78,17 +82,19 @@ export function AdminView() {
         placeholder: "https://...",
       }),
     ),
-
     h(
       "button",
       { type: "submit", class: "claim-primary", style: { marginTop: "24px" } },
       "Publish Track",
     ),
   );
-
   el.appendChild(form);
 
-  // --- DANGER ZONE (WEEKLY RESET) ---
+  // 2. MANAGE TRACKS LIST
+  const trackListWrap = h("div", { style: { marginTop: "48px" } });
+  el.appendChild(trackListWrap);
+
+  // 3. DANGER ZONE
   el.appendChild(
     h(
       "div",
@@ -118,7 +124,7 @@ export function AdminView() {
           class: "muted",
           style: { fontSize: "14px", marginBottom: "16px", lineHeight: "1.5" },
         },
-        "Ending the week will freeze the current leaderboard, save the results to the archive, reset all fan votes back to 10, and start the next week. This cannot be undone.",
+        "Ending the week will freeze the current leaderboard, reset all votes, and start a new week.",
       ),
       h(
         "button",
@@ -138,7 +144,6 @@ export function AdminView() {
             try {
               const res = await api.resetCycle();
               showToast(res.message || "Week reset successful!");
-              // Force reload to fetch the new cycle data
               window.location.reload();
             } catch (err) {
               showToast(err.message || "Failed to reset cycle");
@@ -152,20 +157,174 @@ export function AdminView() {
     ),
   );
 
+  // --- LOGIC ---
+  async function loadTracks() {
+    try {
+      const data = await api.getAdminTracks();
+      allTracks = data.tracks || [];
+      isLoadingTracks = false;
+      renderTrackList();
+    } catch (err) {
+      showToast("Failed to load tracks");
+      isLoadingTracks = false;
+      renderTrackList();
+    }
+  }
+
+  function renderTrackList() {
+    trackListWrap.innerHTML = "";
+    trackListWrap.appendChild(
+      h(
+        "h2",
+        { style: { fontSize: "18px", marginBottom: "16px" } },
+        "Manage Tracks",
+      ),
+    );
+
+    if (isLoadingTracks) {
+      trackListWrap.appendChild(
+        h("p", { class: "muted" }, "Loading tracks..."),
+      );
+      return;
+    }
+
+    if (allTracks.length === 0) {
+      trackListWrap.appendChild(
+        h("p", { class: "muted" }, "No tracks in the database."),
+      );
+      return;
+    }
+
+    const list = h("div", {
+      style: { display: "flex", flexDirection: "column", gap: "8px" },
+    });
+
+    allTracks.forEach((track) => {
+      const row = h(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px",
+            background: "var(--bg-elev)",
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+            gap: "12px",
+          },
+        },
+        h(
+          "div",
+          { style: { flex: 1, overflow: "hidden" } },
+          h(
+            "div",
+            {
+              style: {
+                fontWeight: "600",
+                fontSize: "14px",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              },
+            },
+            track.title,
+          ),
+          h(
+            "div",
+            { style: { fontSize: "12px", color: "var(--text-muted)" } },
+            track.artistId ? track.artistId.name : "Unknown Artist",
+          ),
+        ),
+        h(
+          "div",
+          { style: { display: "flex", gap: "8px" } },
+          h(
+            "button",
+            {
+              style: {
+                background: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                color: "var(--text)",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                fontSize: "12px",
+                cursor: "pointer",
+              },
+              onClick: () => handleEdit(track),
+            },
+            "Edit",
+          ),
+          h(
+            "button",
+            {
+              style: {
+                background: "rgba(255,92,108,0.1)",
+                border: "1px solid var(--danger)",
+                color: "var(--danger)",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                fontSize: "12px",
+                cursor: "pointer",
+              },
+              onClick: () => handleDelete(track),
+            },
+            "Delete",
+          ),
+        ),
+      );
+      list.appendChild(row);
+    });
+
+    trackListWrap.appendChild(list);
+  }
+
+  async function handleEdit(track) {
+    const newTitle = prompt("Edit Track Title:", track.title);
+    if (newTitle === null) return; // Cancelled
+
+    const newYt = prompt(
+      "Edit YouTube ID (or leave blank):",
+      track.youtubeVideoId || "",
+    );
+    if (newYt === null) return; // Cancelled
+
+    try {
+      await api.updateTrack(track._id, {
+        title: newTitle,
+        youtubeVideoId: newYt,
+      });
+      showToast("Track updated");
+      await syncCatalog(); // Update the global frontend catalog
+      loadTracks(); // Refresh local admin list
+    } catch (err) {
+      showToast("Failed to update track");
+    }
+  }
+
+  async function handleDelete(track) {
+    if (!confirm(`Delete "${track.title}"? This cannot be undone.`)) return;
+    try {
+      await api.deleteTrack(track._id);
+      showToast("Track deleted");
+      await syncCatalog();
+      loadTracks();
+    } catch (err) {
+      showToast("Failed to delete track");
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     const btn = form.querySelector('button[type="submit"]');
     btn.textContent = "Publishing...";
     btn.disabled = true;
 
-    // Smart YouTube ID extraction
     let rawYt = form.youtubeVideoId.value.trim();
     let ytId = rawYt;
-    if (rawYt.includes("v=")) {
-      ytId = rawYt.split("v=")[1].split("&")[0];
-    } else if (rawYt.includes("youtu.be/")) {
+    if (rawYt.includes("v=")) ytId = rawYt.split("v=")[1].split("&")[0];
+    else if (rawYt.includes("youtu.be/"))
       ytId = rawYt.split("youtu.be/")[1].split("?")[0];
-    }
 
     const data = {
       title: form.title.value,
@@ -180,8 +339,8 @@ export function AdminView() {
       await api.addTrack(data);
       showToast("Track published successfully!");
       form.reset();
-
       await syncCatalog();
+      loadTracks(); // Refresh the list below
     } catch (err) {
       showToast(err.message || "Failed to publish track");
     } finally {
@@ -199,6 +358,9 @@ export function AdminView() {
       hint || null,
     );
   }
+
+  // Initial Load
+  loadTracks();
 
   return { el, destroy: () => {} };
 }

@@ -13,6 +13,53 @@ const router = express.Router();
 
 // ... (Your existing /add-track route stays here) ...
 
+// Get all tracks for management
+router.get("/tracks", requireAuth, async (req, res) => {
+  if (req.user.email !== process.env.ADMIN_EMAIL) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+  try {
+    const tracks = await Track.find()
+      .populate("artistId", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ tracks });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch tracks" });
+  }
+});
+
+// Delete a track
+router.delete("/tracks/:id", requireAuth, async (req, res) => {
+  if (req.user.email !== process.env.ADMIN_EMAIL) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+  try {
+    await Track.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete track" });
+  }
+});
+
+// Edit a track (Title or YouTube ID)
+router.put("/tracks/:id", requireAuth, async (req, res) => {
+  if (req.user.email !== process.env.ADMIN_EMAIL) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+  try {
+    const { title, youtubeVideoId } = req.body;
+    const updated = await Track.findByIdAndUpdate(
+      req.params.id,
+      { $set: { title, youtubeVideoId } },
+      { new: true },
+    );
+    res.json({ success: true, track: updated });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update track" });
+  }
+});
+
 // The Reset Route
 router.post("/reset-cycle", async (req, res, next) => {
   const authHeader = req.headers.authorization;
