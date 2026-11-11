@@ -187,6 +187,7 @@ export function ExploreView() {
     // 2. Filter Tracks
     var entries = getBoard(s.cycle.id);
     var filtered = entries.filter(function (e) {
+      if (!e.track || !e.track.artist) return false; // <-- Add this line
       if (filter === "unvoted" && e.votedByMe) return false;
       if (currentGenreId && e.track.genre !== currentGenreId) return false;
       return matchesQuery(e, query);

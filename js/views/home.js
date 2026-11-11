@@ -42,7 +42,11 @@ export function HomeView() {
         })
       : allEntries;
 
-    var trending = entries.slice(0, 4);
+    var trending = entries
+      .filter(function (e) {
+        return e.track && e.track.artist && e.track.album;
+      })
+      .slice(0, 4);
     var topAlbums = getAlbumBoard(s.cycle.id, currentGenreId).slice(0, 4);
 
     el.innerHTML = "";
