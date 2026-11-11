@@ -140,6 +140,17 @@ export function MeView() {
         "section",
         { class: "me-settings" },
         h("h3", {}, "Settings"),
+
+        // --- NEW INSTALL APP BUTTON ---
+        settingsItem("📲", "Install Baze App", function () {
+          if (window.installPWA) {
+            window.installPWA();
+          } else {
+            showToast("Use your browser menu to 'Add to Home Screen'");
+          }
+        }),
+        // -----------------------------
+
         settingsItem("🔔", "Notifications", function () {
           showToast("Notifications coming soon");
         }),
@@ -150,7 +161,7 @@ export function MeView() {
           location.hash = "#/ranking-explained";
         }),
 
-        // --- NEW DASHBOARD LINK ---
+        // --- DASHBOARD LINK ---
         s.claimedArtistId
           ? settingsItem("📊", "Artist Dashboard", function () {
               location.hash = "#/dashboard";
