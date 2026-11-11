@@ -1587,11 +1587,16 @@ textarea.claim-input {
     padding-left: 240px;
     padding-bottom: 0;
     max-width: none;
+    margin: 0; /* Fixes the auto-margin pushing the app right */
+    width: 100%;
   }
+
   .screen {
     max-width: 1200px;
     margin: 0 auto;
     padding: 32px 40px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   h1 {
@@ -1609,6 +1614,7 @@ textarea.claim-input {
     inset: 0 auto 0 0;
     width: 240px;
     max-width: none;
+    margin: 0; /* REMOVES the auto-margin that was floating it to the center */
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -1618,6 +1624,8 @@ textarea.claim-input {
     border-top: none;
     border-right: 1px solid var(--border);
   }
+
+  /* ... Keep the rest of your desktop CSS exactly the same (::before, a.active, etc.) ... */
   .bottom-nav::before {
     content: "BAZE";
     display: block;
@@ -1884,11 +1892,10 @@ textarea.claim-input {
 @keyframes page-fade-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    /* REMOVED transform: translateY(8px); so the bottom nav stays fixed! */
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
