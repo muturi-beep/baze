@@ -18,7 +18,19 @@ export function LeaderboardView() {
       h(
         "header",
         { class: "topbar" },
-        h("h1", {}, s.cycle.city + " " + s.cycle.genre),
+        h(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: "8px" } },
+          h("h1", {}, `${s.cycle.city} ${s.cycle.genre}`),
+          h(
+            "span",
+            {
+              class: "live-dot",
+              style: { position: "relative", marginLeft: "8px" },
+            },
+            "",
+          ),
+        ),
         h("span", { class: "countdown" }, formatRemaining(s.cycle.endsAt)),
       ),
     );

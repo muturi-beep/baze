@@ -1,3 +1,4 @@
+import confetti from "canvas-confetti";
 import { h } from "../dom.js";
 import { subscribe, getState, getTrack, getBoard, castVote } from "../store.js";
 import { voteButton, rankDelta, showToast } from "../components.js";
@@ -267,6 +268,15 @@ export function TrackView(params) {
         voteState = "voted";
         rankAfter = res.rank;
         render();
+
+        // 🎉 TRIGGER CONFETTI 🎉
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#ff8a3d", "#3ddc84", "#f5f5f7"], // Baze colors
+        });
+
         if (rankBefore != null) {
           var text =
             rankAfter < rankBefore
