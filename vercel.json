@@ -3,5 +3,11 @@
   "rewrites": [
     { "source": "/v1/(.*)", "destination": "/api/index" },
     { "source": "/share/(.*)", "destination": "/api/index" }
+  ],
+  "crons": [
+    {
+      "path": "/v1/admin/reset-cycle",
+      "schedule": "0 21 * * 0"
+    }
   ]
 }

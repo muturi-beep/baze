@@ -13,21 +13,30 @@ const router = express.Router();
 
 // ... (Your existing /add-track route stays here) ...
 
-router.post("/reset-cycle", requireAuth, async (req, res) => {
-  try {
-    if (!process.env.ADMIN_EMAIL) {
-      return res
-        .status(500)
-        .json({
-          error: "ADMIN_EMAIL is missing from Vercel Environment Variables.",
-        });
-    }
-    if (req.user.email !== process.env.ADMIN_EMAIL) {
-      return res
-        .status(403)
-        .json({ error: `Unauthorized. Your email is ${req.user.email}.` });
-    }
+// The Reset Route
+router.post("/reset-cycle", async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}`;
 
+  if (!isCron) {
+    // If it's a user clicking the button, verify they are the admin
+    return requireAuth(req, res, () => {
+      if (
+        !process.env.ADMIN_EMAIL ||
+        req.user.email !== process.env.ADMIN_EMAIL
+      ) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      proceedWithReset(req, res);
+    });
+  }
+
+  // If it's Vercel Cron, proceed immediately
+  proceedWithReset(req, res);
+});
+
+async function proceedWithReset(req, res) {
+  try {
     let currentCycle = await Cycle.findOne({ status: "open" });
     if (!currentCycle) {
       currentCycle = await Cycle.create({
@@ -49,12 +58,7 @@ router.post("/reset-cycle", requireAuth, async (req, res) => {
     voteAggregation.sort((a, b) => b.totalVotes - a.totalVotes);
 
     for (const item of voteAggregation) {
-      // 🚨 FIX: Skip old mock votes (like "trk_01") that are not valid MongoDB ObjectIds
-      if (!mongoose.Types.ObjectId.isValid(item._id)) {
-        console.log(`Skipping invalid track ID: ${item._id}`);
-        continue;
-      }
-
+      if (!mongoose.Types.ObjectId.isValid(item._id)) continue;
       const track = await Track.findById(item._id).populate("artistId");
       if (track) {
         snapshotResults.push({
@@ -86,9 +90,7 @@ router.post("/reset-cycle", requireAuth, async (req, res) => {
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
-    // 🚨 FIX: Delete all old votes so they don't pollute future weeks
     await Vote.deleteMany({});
-
     await User.updateMany({}, { $set: { votesRemaining: 10 } });
 
     res.json({
@@ -99,6 +101,6 @@ router.post("/reset-cycle", requireAuth, async (req, res) => {
     console.error("Reset cycle error:", err);
     res.status(500).json({ error: err.message || "Failed to reset cycle" });
   }
-});
+}
 
 export default router;
