@@ -1,33 +1,35 @@
 import express from "express";
-import User from "../models/User.js";
+import ClaimRequest from "../models/ClaimRequest.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Claim an artist profile
-router.post("/artist", requireAuth, async (req, res) => {
+router.post("/request", requireAuth, async (req, res) => {
   try {
-    const { artistId, artistName } = req.body;
-    const user = req.user;
+    const { artistId, artistName, contactInfo } = req.body;
 
-    // 1. Check if user already claimed an artist
-    if (user.claimedArtistId) {
+    // Check if there is already a pending request for this artist
+    const existing = await ClaimRequest.findOne({
+      artistId,
+      status: "pending",
+    });
+    if (existing) {
       return res
         .status(400)
-        .json({ error: "You have already claimed a profile." });
+        .json({ error: "There is already a pending claim for this artist." });
     }
 
-    // 2. Update user roles and link the artist
-    user.roles = ["fan", "artist"]; // Upgrade role
-    user.claimedArtistId = artistId;
-    user.displayName = artistName; // Optionally use artist name as display name
+    await ClaimRequest.create({
+      userId: req.user._id,
+      artistId,
+      artistName,
+      contactInfo,
+    });
 
-    await user.save();
-
-    res.json({ success: true, user });
+    res.json({ success: true, message: "Claim submitted for review." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Failed to submit claim" });
   }
 });
 

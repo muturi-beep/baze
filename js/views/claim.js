@@ -1,34 +1,54 @@
 import { h } from "../dom.js";
-import {
-  subscribe,
-  getState,
-  searchArtists,
-  claimArtist,
-  getClaimedArtist,
-} from "../store.js";
+import { subscribe, getState, searchArtists } from "../store.js";
 import { showToast } from "../components.js";
+import { api } from "../api.js";
 
 export function ClaimView() {
   var el = h("main", { class: "screen claim-screen" });
   var step = 1;
   var query = "";
   var selectedId = null;
-  var draft = { bio: "", instagram: "", youtube: "", photoUrl: "" };
+  var contactInfo = "";
+  var isSubmitted = false;
 
   function render() {
-    var s = getState();
+    el.innerHTML = "";
+    el.appendChild(backBar(!isSubmitted));
 
-    if (s.claimedArtistId) {
-      el.innerHTML = "";
-      el.appendChild(backBar(false));
-      el.appendChild(successScreen());
+    if (isSubmitted) {
+      el.appendChild(
+        h(
+          "div",
+          { class: "claim-step-body claim-success" },
+          h(
+            "div",
+            {
+              class: "claim-success-icon",
+              style: {
+                background: "rgba(255, 138, 61, 0.15)",
+                color: "var(--accent)",
+              },
+            },
+            "⏳",
+          ),
+          h("h2", {}, "Claim Pending"),
+          h(
+            "p",
+            { class: "muted" },
+            "Your request has been sent to the Baze team for verification.",
+          ),
+          h(
+            "p",
+            { class: "muted" },
+            "We will review your social media and approve your profile shortly.",
+          ),
+          h("a", { class: "claim-primary", href: "#/" }, "Back to Home"),
+        ),
+      );
       return;
     }
 
-    el.innerHTML = "";
-    el.appendChild(backBar(true));
     el.appendChild(stepIndicator(step));
-
     if (step === 1) renderStep1();
     else if (step === 2) renderStep2();
     else if (step === 3) renderStep3();
@@ -77,7 +97,6 @@ export function ClaimView() {
 
   function renderStep1() {
     var all = searchArtists("");
-    // MongoDB uses claimedBy to indicate if an artist is claimed
     var unclaimed = all.filter(function (a) {
       return !a.claimedBy;
     });
@@ -99,7 +118,6 @@ export function ClaimView() {
               type: "button",
               class: "claim-row",
               onClick: function () {
-                // MongoDB uses _id instead of id
                 selectedId = a._id;
                 step = 2;
                 render();
@@ -117,34 +135,16 @@ export function ClaimView() {
       );
     });
 
-    if (filtered.length === 0) {
-      list.appendChild(
-        h(
-          "li",
-          { class: "claim-empty" },
-          query
-            ? 'No artists match "' + query + '"'
-            : "All artists in this cycle have been claimed",
-        ),
-      );
-    }
-
     var input = h("input", {
       type: "search",
       class: "claim-search",
       placeholder: "Search artist name",
-      autocomplete: "off",
       value: query,
     });
     input.addEventListener("input", function (e) {
       query = e.target.value.trim();
-      var cursorPos = e.target.selectionStart;
       render();
-      var newInput = el.querySelector(".claim-search");
-      if (newInput) {
-        newInput.focus();
-        newInput.setSelectionRange(cursorPos, cursorPos);
-      }
+      el.querySelector(".claim-search").focus();
     });
 
     el.appendChild(
@@ -154,42 +154,20 @@ export function ClaimView() {
         h(
           "p",
           { class: "claim-intro" },
-          "Find your artist name. If your profile is already live, claim it to control how it looks and to be notified of votes.",
+          "Find your artist name. We will verify your identity before giving you access.",
         ),
         input,
         list,
-        h(
-          "div",
-          { class: "claim-hint" },
-          h("p", { class: "muted" }, "Can't find yourself?"),
-          h(
-            "button",
-            {
-              type: "button",
-              class: "claim-secondary",
-              onClick: function () {
-                showToast("Profile request coming soon");
-              },
-            },
-            "Request a new profile",
-          ),
-        ),
       ),
     );
   }
 
   function renderStep2() {
-    // Use _id here too
     var artist = selectedId
       ? searchArtists("").find(function (a) {
           return a._id === selectedId;
         })
       : null;
-    if (!artist) {
-      step = 1;
-      render();
-      return;
-    }
 
     el.appendChild(
       h(
@@ -198,7 +176,7 @@ export function ClaimView() {
         h(
           "p",
           { class: "claim-intro" },
-          "Verify you own this profile. Pick one method:",
+          "How will you verify your identity? We will check this manually.",
         ),
         h(
           "div",
@@ -212,18 +190,19 @@ export function ClaimView() {
             type: "button",
             class: "claim-option",
             onClick: function () {
-              verify();
+              step = 3;
+              render();
             },
           },
           h("span", { class: "claim-option-icon" }, "📸"),
           h(
             "div",
             { class: "claim-option-text" },
-            h("span", { class: "claim-option-title" }, "Post on Instagram"),
+            h("span", { class: "claim-option-title" }, "Instagram / Twitter"),
             h(
               "span",
               { class: "claim-option-sub" },
-              "Share a link to Baze from your story",
+              "We will ask for your handle",
             ),
           ),
         ),
@@ -233,68 +212,33 @@ export function ClaimView() {
             type: "button",
             class: "claim-option",
             onClick: function () {
-              verify();
+              step = 3;
+              render();
             },
           },
           h("span", { class: "claim-option-icon" }, "✉️"),
           h(
             "div",
             { class: "claim-option-text" },
-            h("span", { class: "claim-option-title" }, "Email from label"),
+            h("span", { class: "claim-option-title" }, "Official Email"),
             h(
               "span",
               { class: "claim-option-sub" },
-              "Send from your label email to verify@baze.fm",
+              "Send from your label email",
             ),
           ),
-        ),
-        h(
-          "button",
-          {
-            type: "button",
-            class: "claim-option",
-            onClick: function () {
-              verify();
-            },
-          },
-          h("span", { class: "claim-option-icon" }, "🔍"),
-          h(
-            "div",
-            { class: "claim-option-text" },
-            h("span", { class: "claim-option-title" }, "Manual review"),
-            h(
-              "span",
-              { class: "claim-option-sub" },
-              "We'll review within 48 hours",
-            ),
-          ),
-        ),
-        h(
-          "p",
-          { class: "claim-disclaimer" },
-          "This is a demo. Verification is simulated for now — real verification ships with the backend.",
         ),
       ),
     );
   }
 
-  function verify() {
-    showToast("Verification simulated");
-    step = 3;
-    render();
-  }
-
   function renderStep3() {
-    var artist = selectedId
-      ? searchArtists("").find(function (a) {
-          return a._id === selectedId;
-        })
-      : null;
-    if (!artist) {
-      step = 1;
-      render();
-      return;
-    }
+    var input = h("input", {
+      type: "text",
+      class: "claim-input",
+      placeholder: "@yourhandle or email@domain.com",
+      value: contactInfo,
+    });
 
     el.appendChild(
       h(
@@ -303,135 +247,45 @@ export function ClaimView() {
         h(
           "p",
           { class: "claim-intro" },
-          "Make your profile yours. You can edit these later.",
+          "Enter your contact info so we can verify you.",
         ),
-        field(
-          "Artist name",
-          h("input", {
-            type: "text",
-            value: artist.name,
-            disabled: true,
-            class: "claim-input",
-          }),
-          "Verified from your catalog — contact us to change",
-        ),
-        field(
-          "Bio",
-          h("textarea", {
-            rows: 3,
-            class: "claim-input",
-            placeholder: "One line about your music",
-            value: draft.bio,
-            onInput: function (e) {
-              draft.bio = e.target.value;
-            },
-          }),
-        ),
-        field(
-          "Instagram",
-          h("input", {
-            type: "text",
-            class: "claim-input",
-            placeholder: "@handle",
-            value: draft.instagram,
-            onInput: function (e) {
-              draft.instagram = e.target.value;
-            },
-          }),
-        ),
-        field(
-          "YouTube",
-          h("input", {
-            type: "text",
-            class: "claim-input",
-            placeholder: "Channel URL",
-            value: draft.youtube,
-            onInput: function (e) {
-              draft.youtube = e.target.value;
-            },
-          }),
-        ),
-        field(
-          "Profile photo URL",
-          h("input", {
-            type: "url",
-            class: "claim-input",
-            placeholder: "https://...",
-            value: draft.photoUrl,
-            onInput: function (e) {
-              draft.photoUrl = e.target.value;
-            },
-          }),
+        h(
+          "label",
+          { class: "claim-field" },
+          h("span", { class: "claim-field-label" }, "Verification Contact"),
+          input,
         ),
         h(
           "button",
           {
             type: "button",
             class: "claim-primary",
-            onClick: function () {
-              claimArtist(selectedId, {
-                bio: draft.bio,
-                photoUrl: draft.photoUrl,
-                links: { instagram: draft.instagram, youtube: draft.youtube },
-              })
-                .then(function () {
-                  showToast("Profile claimed");
-                  render();
-                })
-                .catch(function (err) {
-                  showToast(err.message || "Failed to claim");
+            onClick: async function () {
+              if (!input.value.trim())
+                return showToast("Please enter your contact info");
+
+              try {
+                const artist = searchArtists("").find(function (a) {
+                  return a._id === selectedId;
                 });
+                await api.requestClaim({
+                  artistId: selectedId,
+                  artistName: artist.name,
+                  contactInfo: input.value.trim(),
+                });
+                isSubmitted = true;
+                render();
+              } catch (err) {
+                showToast(err.message || "Failed to submit claim");
+              }
             },
           },
-          "Save & claim",
+          "Submit for Review",
         ),
       ),
     );
   }
 
-  function successScreen() {
-    var artist = getClaimedArtist();
-    return h(
-      "div",
-      { class: "claim-step-body claim-success" },
-      h("div", { class: "claim-success-icon" }, "✓"),
-      h("h2", {}, "You're verified"),
-      h("p", { class: "muted" }, "You now control"),
-      h("p", { class: "claim-artist-name" }, artist ? artist.name : ""),
-      h(
-        "p",
-        { class: "muted" },
-        "Share your artist page to bring your fans here. Every fan vote counts.",
-      ),
-      h(
-        "a",
-        {
-          class: "claim-primary",
-          href: artist ? "#/artist/" + artist._id : "#/",
-        },
-        "View my artist page",
-      ),
-      h(
-        "a",
-        { class: "claim-secondary", href: "#/explore" },
-        "Back to explore",
-      ),
-    );
-  }
-
-  function field(label, input, hint) {
-    return h(
-      "label",
-      { class: "claim-field" },
-      h("span", { class: "claim-field-label" }, label),
-      input,
-      hint ? h("span", { class: "claim-field-hint" }, hint) : null,
-    );
-  }
-
-  var unsub = subscribe(function () {
-    if (getState().claimedArtistId) render();
-  });
   render();
-  return { el: el, destroy: unsub };
+  return { el: el, destroy: () => {} };
 }

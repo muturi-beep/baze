@@ -76,4 +76,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  requestClaim: (data) =>
+    request("/claims/request", { method: "POST", body: JSON.stringify(data) }),
+  getPendingClaims: () => request("/admin/claims"),
+  approveClaim: (id) =>
+    request(`/admin/claims/${id}/approve`, { method: "POST" }),
 };

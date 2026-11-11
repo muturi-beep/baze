@@ -8,6 +8,7 @@ import User from "../models/User.js";
 import Cycle from "../models/Cycle.js";
 import CertifiedResult from "../models/CertifiedResult.js";
 import { requireAuth } from "../middleware/auth.js";
+import ClaimRequest from "../models/ClaimRequest.js";
 
 const router = express.Router();
 
@@ -57,6 +58,45 @@ router.put("/tracks/:id", requireAuth, async (req, res) => {
     res.json({ success: true, track: updated });
   } catch (err) {
     res.status(500).json({ error: "Failed to update track" });
+  }
+});
+
+// Get pending claims
+router.get("/claims", requireAuth, async (req, res) => {
+  if (req.user.email !== process.env.ADMIN_EMAIL)
+    return res.status(403).json({ error: "Unauthorized" });
+  try {
+    const claims = await ClaimRequest.find({ status: "pending" })
+      .populate("userId", "email displayName")
+      .lean();
+    res.json({ claims });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch claims" });
+  }
+});
+
+// Approve a claim
+router.post("/claims/:id/approve", requireAuth, async (req, res) => {
+  if (req.user.email !== process.env.ADMIN_EMAIL)
+    return res.status(403).json({ error: "Unauthorized" });
+  try {
+    const claim = await ClaimRequest.findById(req.params.id);
+    if (!claim) return res.status(404).json({ error: "Claim not found" });
+
+    // 1. Update the user's roles
+    await User.findByIdAndUpdate(claim.userId, {
+      roles: ["fan", "artist"],
+      claimedArtistId: claim.artistId,
+      displayName: claim.artistName,
+    });
+
+    // 2. Mark claim as approved
+    claim.status = "approved";
+    await claim.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to approve claim" });
   }
 });
 
