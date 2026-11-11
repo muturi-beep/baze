@@ -2,15 +2,18 @@ import express from "express";
 import Track from "../models/Track.js";
 import Artist from "../models/Artist.js";
 import Album from "../models/Album.js";
+import CertifiedResult from "../models/CertifiedResult.js";
 
 const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    // Tell Vercel NOT to cache this response
     res.set("Cache-Control", "no-store, max-age=0");
 
-    const tracks = await Track.find()
+    // 🚨 THE FIX: Exclude remixes, instrumentals, and live versions
+    const tracks = await Track.find({
+      title: { $not: /remix|instrumental|live|edit|version|reprise|mix/i },
+    })
       .populate("artistId", "name imageUrl claimedBy")
       .populate("albumId", "title artworkUrl")
       .lean();
@@ -25,14 +28,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-import CertifiedResult from "../models/CertifiedResult.js"; // <-- Add this import at the top
-
-// ... (your existing / route)
-
-// NEW: Get all past certified results
 router.get("/results", async (req, res) => {
   try {
-    // Fetch results, sorted by most recent week first
     const results = await CertifiedResult.find()
       .sort({ weekNumber: -1 })
       .lean();
