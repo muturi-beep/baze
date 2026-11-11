@@ -15,28 +15,37 @@
     <div class="app-shell" id="app"></div>
     <div id="toast-root"></div>
     <script type="module" src="js/main.js"></script>
-  </body>
-  <script>
-    // Catch the browser's install prompt
-    let deferredPrompt;
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      // Show your custom install button here
-      const installBtn = document.getElementById("install-btn");
-      if (installBtn) installBtn.style.display = "flex";
-    });
 
-    // Trigger the prompt when clicked
-    window.installPWA = async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === "accepted") {
-          document.getElementById("install-btn").style.display = "none";
+    <script>
+      let deferredPrompt;
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+      });
+
+      window.installPWA = async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === "accepted") {
+            console.log("User accepted the install prompt");
+          }
+          deferredPrompt = null;
+        } else {
+          // Fallback for iOS or if the prompt didn't trigger
+          const isIOS =
+            /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          if (isIOS) {
+            alert(
+              "To install on iPhone:\n\n1. Tap the Share button (square with an arrow).\n2. Scroll down and tap 'Add to Home Screen'.",
+            );
+          } else {
+            alert(
+              "To install:\n\n1. Tap the 3 dots in the top right corner of your browser.\n2. Tap 'Install App' or 'Add to Home Screen'.",
+            );
+          }
         }
-        deferredPrompt = null;
-      }
-    };
-  </script>
+      };
+    </script>
+  </body>
 </html>
