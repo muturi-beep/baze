@@ -40,27 +40,30 @@ router.post("/request-otp", otpLimiter, async (req, res) => {
       expiresAt,
     });
 
-    // Send the real email via Resend
-    try {
-      const { data, error } = await resend.emails.send({
-        from: "Baze <onboarding@resend.dev>", // Use your Resend test address for now
-        to: identifier, // The email address the user entered
-        subject: "Your Baze Login Code",
-        html: `<p>Your 6-digit login code is: <strong>${code}</strong></p><p>This code expires in 10 minutes.</p>`,
-      });
+    // --- 🚨 LOCAL DEV BYPASS: PRINT OTP TO TERMINAL 🚨 ---
+    console.log(`\n================================`);
+    console.log(`🔑 DEV MODE OTP for ${identifier}: ${code}`);
+    console.log(`================================\n`);
+    
+    // We are skipping the actual Resend email call for now so it doesn't crash
+    // try {
+    //   const { data, error } = await resend.emails.send({
+    //     from: "Baze <onboarding@resend.dev>",
+    //     to: identifier,
+    //     subject: "Your Baze Login Code",
+    //     html: `<p>Your 6-digit login code is: <strong>${code}</strong></p>`,
+    //   });
+    //   if (error) {
+    //     console.error("Resend Error:", error);
+    //     return res.status(500).json({ error: error.message });
+    //   }
+    // } catch (emailErr) {
+    //   console.error("Resend SDK Crash:", emailErr);
+    //   return res.status(500).json({ error: "Email service unavailable" });
+    // }
+    // -----------------------------------------------------
 
-      if (error) {
-        console.error("Resend Error:", error);
-        return res
-          .status(500)
-          .json({ error: error.message || "Failed to send email" });
-      }
-    } catch (emailErr) {
-      console.error("Resend SDK Crash:", emailErr);
-      return res.status(500).json({ error: "Email service unavailable" });
-    }
-
-    res.json({ success: true, message: "OTP sent to your email" });
+    res.json({ success: true, message: "OTP sent to your terminal" });
   } catch (err) {
     console.error("Server Error:", err);
     res.status(500).json({ error: "Server error" });
@@ -129,7 +132,7 @@ router.post("/verify-otp", async (req, res) => {
     // Set HTTP-only cookie
     res.cookie("sessionToken", token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production", // 🚨 FIXED: Only secure in production, so it works on localhost!
       sameSite: "lax",
       expires: expiresAt,
     });

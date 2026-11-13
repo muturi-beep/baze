@@ -13,6 +13,9 @@ import catalogRoutes from "./routes/catalog.js";
 import shareRoutes from "./routes/share.js";
 import reportRoutes from "./routes/reports.js";
 
+import dns from "node:dns";
+dns.setServers(["8.8.8.8", "8.8.4.4"]); // Forces Node to use Google DNS
+
 dotenv.config();
 
 const app = express();
