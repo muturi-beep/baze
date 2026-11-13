@@ -402,3 +402,71 @@ export function producerCard(opts) {
     ),
   );
 }
+
+export function showShareModal(track, onClose) {
+  var backdrop = h("div", { 
+    class: "sheet-backdrop", 
+    style: { 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center", 
+      padding: "20px",
+      zIndex: 100 
+    } 
+  });
+  
+  var cleanUrl = window.location.origin + "/share/track/" + track.id + "?ref=vote";
+
+  var shareText = `I just voted for "${track.title}" by ${track.artist?.name || "Unknown"} on Baze! Help them climb the chart by voting too:`;
+
+  var modal = h("div", { 
+    class: "sheet", 
+    style: { 
+      background: "var(--bg-elev)", 
+      borderRadius: "20px", 
+      padding: "32px 24px", 
+      textAlign: "center", 
+      maxWidth: "400px", 
+      width: "100%",
+      position: "relative"
+    } 
+  },
+    h("button", { 
+      style: { position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: "var(--text-muted)", fontSize: "24px", cursor: "pointer" },
+      onClick: onClose
+    }, "×"),
+
+    h("div", { style: { fontSize: "40px", marginBottom: "16px" } }, "🚀"),
+    h("h2", { style: { margin: "0 0 8px", fontSize: "22px" } }, "Vote Counted!"),
+    h("p", { class: "muted", style: { margin: "0 0 24px", fontSize: "14px", lineHeight: "1.5" } }, 
+      "Help ", h("strong", { style: { color: "var(--text)" } }, track.artist?.name || "this artist"), " climb the chart. Share this track with your friends."
+    ),
+
+    h("button", {
+      class: "claim-primary",
+      style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "#25D366", color: "#fff" },
+      onClick: function () {
+        var waUrl = `https://wa.me/?text=${encodeURIComponent(shareText + " " + cleanUrl)}`;
+        window.open(waUrl, "_blank");
+        onClose();
+      }
+    }, "Share on WhatsApp"),
+
+    h("button", {
+      class: "claim-secondary",
+      style: { marginTop: "12px" },
+      onClick: function () {
+        if (navigator.share) {
+          navigator.share({ title: track.title, text: shareText, url: cleanUrl }).catch(() => {});
+        } else {
+          navigator.clipboard.writeText(shareText + " " + cleanUrl);
+          showToast("Link copied!");
+        }
+        onClose();
+      }
+    }, "Other Apps / Copy Link")
+  );
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}

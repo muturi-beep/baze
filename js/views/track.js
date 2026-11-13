@@ -1,7 +1,7 @@
 import confetti from "canvas-confetti";
 import { h } from "../dom.js";
 import { subscribe, getState, getTrack, getBoard, castVote } from "../store.js";
-import { voteButton, rankDelta, showToast } from "../components.js";
+import { voteButton, rankDelta, showToast, showShareModal } from "../components.js";
 import { formatDuration, formatRemaining } from "../format.js";
 
 export function TrackView(params) {
@@ -112,10 +112,7 @@ export function TrackView(params) {
 
     // --- YOUTUBE EMBED PLAYER (Hardened) ---
     if (track.youtubeVideoId) {
-      // 1. Define the origin (your live domain)
       const origin = window.location.origin;
-
-      // 2. Build the secure embed URL with origin and enablejsapi
       const embedUrl = `https://www.youtube.com/embed/${track.youtubeVideoId}?origin=${encodeURIComponent(origin)}&enablejsapi=1&rel=0`;
 
       details.appendChild(
@@ -123,11 +120,7 @@ export function TrackView(params) {
           "div",
           {
             class: "youtube-player",
-            style: {
-              margin: "24px 0",
-              borderRadius: "12px",
-              overflow: "hidden",
-            },
+            style: { margin: "24px 0", borderRadius: "12px", overflow: "hidden" },
           },
           h("iframe", {
             width: "100%",
@@ -135,16 +128,13 @@ export function TrackView(params) {
             src: embedUrl,
             title: "YouTube video player",
             frameborder: "0",
-            // 3. The referrerpolicy attribute is CRITICAL for cross-origin embeds
             referrerpolicy: "strict-origin-when-cross-origin",
-            allow:
-              "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+            allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
             allowfullscreen: true,
           }),
         ),
       );
 
-      // 4. Provide a fallback link in case the video owner disabled embedding
       details.appendChild(
         h(
           "a",
@@ -286,6 +276,15 @@ export function TrackView(params) {
                 : "Vote counted. Rank unchanged.";
           showToast(text);
         }
+
+        // 🚨 NEW: SHOW THE SHARE MODAL
+        var track = getTrack(trackId);
+        setTimeout(function() {
+          showShareModal(track, function() {
+            console.log("Share modal closed");
+          });
+        }, 800); // Wait 800ms so the confetti pops first!
+
       })
       .catch(function (err) {
         if (err && err.code === "CANNOT_VOTE_FOR_SELF") {
@@ -301,7 +300,6 @@ export function TrackView(params) {
   }
 
   function handleShare() {
-    // Use the clean /share/ URL instead of the #/ URL
     var url = window.location.origin + "/share/track/" + trackId;
     var track = getTrack(trackId);
 
