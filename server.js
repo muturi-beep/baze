@@ -14,11 +14,10 @@ import catalogRoutes from "./routes/catalog.js";
 import adminRoutes from "./routes/admin.js";
 import reportRoutes from "./routes/reports.js";
 import shareRoutes from "./routes/share.js";
-import submissionRoutes from "./routes/submissions.js"; // If you added this
 
 dotenv.config();
 
-// 🚨 FIX: Only force Google DNS on Windows, NEVER on Vercel (Linux)
+// Only force Google DNS on Windows, NEVER on Vercel (Linux)
 if (os.platform() === "win32") {
   dns.setServers(["8.8.8.8", "8.8.4.4"]);
 }
@@ -50,7 +49,6 @@ app.use(async (req, res, next) => {
     await connectDB();
     next();
   } catch (err) {
-    // Return a JSON error instead of letting the serverless function crash
     res.status(500).json({ error: "Database connection failed: " + err.message });
   }
 });
@@ -64,11 +62,10 @@ app.use("/v1/catalog", catalogRoutes);
 app.use("/v1/admin", adminRoutes);
 app.use("/v1/reports", reportRoutes);
 app.use("/share", shareRoutes);
-app.use("/v1/submissions", submissionRoutes); // If you added this
 
 app.get("/", (req, res) => res.json({ message: "Baze API is running." }));
 
-// 🚨 FIX: Never listen on Vercel. Only listen locally.
+// Never listen on Vercel. Only listen locally.
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 4001;
   app.listen(PORT, () => console.log(`🚀 Local backend on http://localhost:${PORT}`));
