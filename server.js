@@ -14,7 +14,14 @@ import shareRoutes from "./routes/share.js";
 import reportRoutes from "./routes/reports.js";
 
 import dns from "node:dns";
-dns.setServers(["8.8.8.8", "8.8.4.4"]); // Forces Node to use Google DNS
+import os from "node:os";
+import express from "express";
+// ... other imports
+
+// 🚨 FIX: Only force Google DNS on Windows, NEVER on Vercel (Linux)
+if (os.platform() === "win32") {
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+}
 
 dotenv.config();
 
