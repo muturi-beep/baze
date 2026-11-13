@@ -83,6 +83,32 @@ export function ExploreView() {
     ),
   );
 
+  // --- 🚨 MOVED TO TOP: ARTIST SUBMISSION BANNER ---
+  el.appendChild(
+    h("a", {
+      href: "#/submit",
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        background: "var(--bg-elev)",
+        border: "1px solid var(--border)",
+        borderRadius: "12px",
+        padding: "12px 16px",
+        marginBottom: "24px",
+        textDecoration: "none",
+        color: "var(--text)"
+      }
+    },
+      h("div", {},
+        h("span", { style: { fontWeight: "600", fontSize: "14px" } }, "Are you an artist?"),
+        h("span", { class: "muted", style: { fontSize: "12px", marginLeft: "8px" } }, "Submit your track")
+      ),
+      h("span", { style: { color: "var(--accent)", fontWeight: "700" } }, "Submit →")
+    )
+  );
+  // ---------------------------------------------------
+
   el.appendChild(trendingWrap);
 
   el.appendChild(
@@ -98,17 +124,6 @@ export function ExploreView() {
   var genreFilterWrap = h("div", { class: "explore-genre-filter" });
   el.appendChild(genreFilterWrap);
   el.appendChild(resultsWrap);
-
-  // --- NEW: ARTIST SUBMISSION BANNER ---
-  el.appendChild(
-    h("div", { style: { marginTop: "32px", padding: "24px", background: "var(--bg-elev)", borderRadius: "16px", textAlign: "center", border: "1px dashed var(--border)" } },
-      h("h3", { style: { margin: "0 0 8px" } }, "Are you an artist?"),
-      h("p", { class: "muted", style: { fontSize: "14px", marginBottom: "16px" } }, "Submit your song to be featured on the Baze chart."),
-      h("a", { href: "#/submit", class: "claim-primary", style: { display: "inline-block", width: "auto", padding: "0 24px" } }, "Submit Music")
-    )
-  );
-  // ------------------------------------
-
   el.appendChild(bottomNav("explore"));
 
   /* ---------- behavior ---------- */
