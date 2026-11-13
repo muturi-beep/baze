@@ -44,20 +44,39 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* 🚨 FIX: Stop horizontal scrolling and breaking out of the screen */
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
+
+/* 🚨 FIX: Force all inputs to 16px so iPhones don't auto-zoom */
+input, select, textarea, button {
+  font-size: 16px !important;
+}
+
+img {
+  display: block;
+  /* 🚨 FIX: Prevent images from breaking out of their containers */
+  max-width: 100%;
+  height: auto;
+}
+
 .app-shell {
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
   padding-bottom: 72px;
+  /* 🚨 FIX: Stop horizontal scrolling */
+  width: 100%;
+  overflow-x: hidden;
 }
 .screen {
   padding: var(--sp-4);
+  width: 100%;
+  box-sizing: border-box;
 }
 a {
   color: inherit;
@@ -66,9 +85,6 @@ a {
 button {
   font-family: inherit;
   cursor: pointer;
-}
-img {
-  display: block;
 }
 ul,
 ol {
@@ -714,7 +730,7 @@ h2 {
   border-radius: var(--r-pill);
   padding: 0 var(--sp-4);
   color: var(--text);
-  font-size: 15px;
+  font-size: 16px; /* 🚨 FIX: Changed from 15px */
   font-family: inherit;
   margin-bottom: var(--sp-3);
 }
@@ -867,7 +883,7 @@ h2 {
   border-radius: 8px;
   padding: var(--sp-3);
   color: var(--text);
-  font-size: 15px;
+  font-size: 16px; /* 🚨 FIX: Changed from 15px */
   font-family: inherit;
 }
 .claim-input:focus {
@@ -1071,15 +1087,19 @@ textarea.claim-input {
   font-variant-numeric: tabular-nums;
 }
 
+/* 🚨 FIX: Album Grid for mobile */
 .album-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--sp-3);
+  gap: var(--sp-2); /* Reduced from 3 to 2 to give images more room */
+  width: 100%;
 }
 .album-tile {
   display: flex;
   flex-direction: column;
   color: inherit;
+  width: 100%;
+  overflow: hidden; /* Prevents long text from pushing the grid wide */
 }
 .album-tile-art {
   position: relative;
@@ -1131,9 +1151,12 @@ textarea.claim-input {
   text-align: center;
   padding: 0 var(--sp-4) var(--sp-5);
 }
+/* 🚨 FIX: Force album hero to scale perfectly on small screens */
 .album-hero-art {
-  width: 200px;
-  height: 200px;
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  aspect-ratio: 1;
   object-fit: cover;
   border-radius: var(--r-card);
   margin: 0 auto var(--sp-4);
@@ -1401,7 +1424,7 @@ textarea.claim-input {
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   color: var(--text);
-  font-size: 15px;
+  font-size: 16px; /* 🚨 FIX: Changed from 15px */
   font-family: inherit;
 }
 .explore-search::placeholder {
@@ -1587,7 +1610,7 @@ textarea.claim-input {
     padding-left: 240px;
     padding-bottom: 0;
     max-width: none;
-    margin: 0; /* Fixes the auto-margin pushing the app right */
+    margin: 0;
     width: 100%;
   }
 
@@ -1614,7 +1637,7 @@ textarea.claim-input {
     inset: 0 auto 0 0;
     width: 240px;
     max-width: none;
-    margin: 0; /* REMOVES the auto-margin that was floating it to the center */
+    margin: 0;
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -1624,8 +1647,6 @@ textarea.claim-input {
     border-top: none;
     border-right: 1px solid var(--border);
   }
-
-  /* ... Keep the rest of your desktop CSS exactly the same (::before, a.active, etc.) ... */
   .bottom-nav::before {
     content: "BAZE";
     display: block;
@@ -1686,9 +1707,6 @@ textarea.claim-input {
     bottom: 40px;
   }
 
-  /* ==========================================================================
-     DESKTOP TRACK PAGE OVERRIDE 
-     ========================================================================== */
   .track-page {
     display: grid;
     grid-template-columns: 340px 1fr;
@@ -1712,7 +1730,6 @@ textarea.claim-input {
     position: sticky;
     top: 40px;
   }
-  /* This is the magic fix for the text block */
   .track-page .track-details {
     grid-column: 2;
     grid-row: 2;
@@ -1731,7 +1748,6 @@ textarea.claim-input {
     margin-bottom: 4px;
   }
 
-  /* Desktop grids */
   .album-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: var(--sp-4);
@@ -1884,7 +1900,6 @@ textarea.claim-input {
    Micro-interactions & Animations
    ========================================================================== */
 
-/* Smooth page load animation */
 .screen {
   animation: page-fade-in 0.3s ease-out forwards;
 }
@@ -1892,14 +1907,12 @@ textarea.claim-input {
 @keyframes page-fade-in {
   from {
     opacity: 0;
-    /* REMOVED transform: translateY(8px); so the bottom nav stays fixed! */
   }
   to {
     opacity: 1;
   }
 }
 
-/* Pulsing LIVE dot */
 .live-dot {
   position: relative;
 }
@@ -1929,7 +1942,6 @@ textarea.claim-input {
   }
 }
 
-/* Button pop effect */
 .vote-button:active:not(:disabled) {
   transform: scale(0.95) !important;
   transition: transform 0.1s ease;
