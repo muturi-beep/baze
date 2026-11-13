@@ -43,7 +43,7 @@ export function LoginView() {
           { class: "muted" },
           step === "email"
             ? "Vote for the bangers. One fan, one vote."
-            : "Enter the 6-digit code sent to " + identifier,
+            : "Enter the 6-digit code",
         ),
       ),
     );
@@ -73,10 +73,15 @@ export function LoginView() {
         identifier = val;
         channel = "email";
 
-        await api.requestOtp(identifier, channel);
+        // Fetch the response from the backend
+        const response = await api.requestOtp(identifier, channel);
 
-        // Production message
-        showToast("Check your email for the code!");
+        // 🚨 SHOW THE OTP DIRECTLY TO THE USER
+        if (response.devCode) {
+          alert("Your Baze Login Code is: " + response.devCode);
+        } else {
+          showToast("Check your email for the code!");
+        }
 
         step = "otp";
         render();

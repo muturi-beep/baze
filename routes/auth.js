@@ -55,14 +55,14 @@ router.post("/request-otp", otpLimiter, async (req, res) => {
       });
 
       if (error) {
-        console.error("Resend Error:", error);
-        // Even if email fails, we don't crash. You can still use the OTP from the console.
+        console.error("Resend Error (Testers will use the on-screen code):", error.message);
       }
     } catch (emailErr) {
       console.error("Resend SDK Crash:", emailErr);
     }
 
-    res.json({ success: true, message: "OTP sent to your email" });
+    // 🚨 SEND THE CODE BACK TO THE FRONTEND
+    res.json({ success: true, message: "OTP generated", devCode: code });
   } catch (err) {
     console.error("Server Error:", err);
     res.status(500).json({ error: "Server error" });
@@ -125,7 +125,7 @@ router.post("/verify-otp", async (req, res) => {
     // Set HTTP-only cookie
     res.cookie("sessionToken", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Only secure in production
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       expires: expiresAt,
     });
