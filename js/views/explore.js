@@ -1,6 +1,5 @@
 import { h } from "../dom.js";
 import { subscribe, getState, getBoard, getArtists } from "../store.js";
-// FIXED: Removed the bad 'getGenre' import
 import {
   exploreCard,
   emptyState,
@@ -99,6 +98,17 @@ export function ExploreView() {
   var genreFilterWrap = h("div", { class: "explore-genre-filter" });
   el.appendChild(genreFilterWrap);
   el.appendChild(resultsWrap);
+
+  // --- NEW: ARTIST SUBMISSION BANNER ---
+  el.appendChild(
+    h("div", { style: { marginTop: "32px", padding: "24px", background: "var(--bg-elev)", borderRadius: "16px", textAlign: "center", border: "1px dashed var(--border)" } },
+      h("h3", { style: { margin: "0 0 8px" } }, "Are you an artist?"),
+      h("p", { class: "muted", style: { fontSize: "14px", marginBottom: "16px" } }, "Submit your song to be featured on the Baze chart."),
+      h("a", { href: "#/submit", class: "claim-primary", style: { display: "inline-block", width: "auto", padding: "0 24px" } }, "Submit Music")
+    )
+  );
+  // ------------------------------------
+
   el.appendChild(bottomNav("explore"));
 
   /* ---------- behavior ---------- */
@@ -187,7 +197,7 @@ export function ExploreView() {
     // 2. Filter Tracks
     var entries = getBoard(s.cycle.id);
     var filtered = entries.filter(function (e) {
-      if (!e.track || !e.track.artist) return false; // <-- Add this line
+      if (!e.track || !e.track.artist) return false;
       if (filter === "unvoted" && e.votedByMe) return false;
       if (currentGenreId && e.track.genre !== currentGenreId) return false;
       return matchesQuery(e, query);

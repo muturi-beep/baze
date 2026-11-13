@@ -17,7 +17,8 @@ import { RankingExplainedView } from "./views/rankingExplained.js";
 import { AdminView } from "./views/admin.js";
 import { DashboardView } from "./views/dashboard.js";
 import { ReportView } from "./views/report.js";
-import { LoginView } from "./views/login.js"; // 🚨 ADDED THIS
+import { LoginView } from "./views/login.js"; 
+import { SubmitView } from "./views/submit.js";
 
 route("/", function () { return HomeView(); });
 route("/track/:trackId", function (p) { return TrackView(p); });
@@ -35,7 +36,8 @@ route("/ranking-explained", function () { return RankingExplainedView(); });
 route("/admin", function () { return AdminView(); });
 route("/dashboard", function () { return DashboardView(); });
 route("/report/:trackId", function (p) { return ReportView(p); });
-route("/login", function () { return LoginView(); }); // 🚨 ADDED THIS
+route("/login", function () { return LoginView(); });
+route("/submit", function () { return SubmitView(); });
 
 // Fetch data BEFORE starting the app
 checkAuth()

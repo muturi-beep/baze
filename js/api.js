@@ -70,16 +70,24 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  // NEW: Report endpoint
+  // Report endpoint
   submitReport: (data) =>
     request("/reports", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
+  // Claims
   requestClaim: (data) =>
     request("/claims/request", { method: "POST", body: JSON.stringify(data) }),
   getPendingClaims: () => request("/admin/claims"),
   approveClaim: (id) =>
     request(`/admin/claims/${id}/approve`, { method: "POST" }),
+
+  // NEW: Submissions
+  submitTrack: (data) => 
+    request("/submissions", { method: "POST", body: JSON.stringify(data) }),
+  getPendingSubmissions: () => request("/submissions/pending"),
+  approveSubmission: (id) => 
+    request(`/submissions/${id}/approve`, { method: "POST" }),
 };
