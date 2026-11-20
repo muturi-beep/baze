@@ -15,8 +15,16 @@ const router = express.Router();
 
 // Helper middleware to check admin
 const adminOnly = (req, res, next) => {
-  if (!process.env.ADMIN_EMAIL || req.user.email !== process.env.ADMIN_EMAIL) {
-    return res.status(403).json({ error: "Unauthorized. Admin access only." });
+  if (!req.user) {
+    return res.status(401).json({ error: "You are not logged in. Please log in again." });
+  }
+  if (!process.env.ADMIN_EMAIL) {
+    return res.status(500).json({ error: "ADMIN_EMAIL is missing in Vercel Environment Variables." });
+  }
+  if (req.user.email !== process.env.ADMIN_EMAIL) {
+    return res.status(403).json({ 
+      error: `Unauthorized. You are logged in as ${req.user.email}, but the Admin is ${process.env.ADMIN_EMAIL}.` 
+    });
   }
   next();
 };

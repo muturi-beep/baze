@@ -76,7 +76,7 @@ export function AdminView() {
   );
 
   // --- LOGIC ---
-  async function loadTracks() {
+      async function loadTracks() {
     try {
       const data = await api.getAdminTracks();
       allTracks = data.tracks || [];
@@ -85,7 +85,8 @@ export function AdminView() {
     } catch (err) {
       console.error("Admin track load failed:", err);
       isLoadingTracks = false;
-      trackListWrap.innerHTML = `<p class="muted" style="color: var(--danger)">Failed to load tracks. Are you logged in as the Admin? Check Vercel ADMIN_EMAIL.</p>`;
+      // 🚨 Show the EXACT error message from the backend
+      trackListWrap.innerHTML = `<p class="muted" style="color: var(--danger); padding: 16px; border: 1px solid var(--danger); border-radius: 8px;">❌ ${err.message}</p>`;
     }
   }
 
