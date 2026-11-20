@@ -16,6 +16,14 @@ export function AdminView() {
     return { el, destroy: () => {} };
   }
 
+  // Helper function to extract YouTube ID
+  function extractYouTubeId(url) {
+    if (!url) return "";
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+    const match = url.match(regex);
+    return (match && match[1]) ? match[1] : url.trim();
+  }
+
   // --- UI SHELL ---
   el.appendChild(
     h("header", { class: "topbar" },
@@ -32,7 +40,7 @@ export function AdminView() {
       field("Song Title", h("input", { name: "title", required: true, class: "claim-input" })),
       field("Artist Name", h("input", { name: "artistName", required: true, class: "claim-input" })),
       field("Album Name (Optional)", h("input", { name: "albumName", class: "claim-input" })),
-      field("YouTube Link or ID", h("input", { name: "youtubeVideoId", required: true, class: "claim-input" })),
+      field("YouTube Link or ID", h("input", { name: "youtubeVideoId", required: true, class: "claim-input", placeholder: "Paste full link or ID" })),
       field("Genre", 
         h("select", { name: "genre", required: true, class: "claim-input" },
           ["afro-pop", "hip-hop", "gengetone", "rnb", "gospel", "benga"].map(g => h("option", { value: g }, g.toUpperCase()))
@@ -52,8 +60,8 @@ export function AdminView() {
     style: { marginBottom: "16px" }
   });
   
-    searchInput.addEventListener("input", (e) => {
-    searchQuery = e.target.value.trim().toLowerCase(); // Added .trim()
+  searchInput.addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim().toLowerCase();
     renderTrackList();
   });
 
@@ -76,7 +84,7 @@ export function AdminView() {
   );
 
   // --- LOGIC ---
-      async function loadTracks() {
+  async function loadTracks() {
     try {
       const data = await api.getAdminTracks();
       allTracks = data.tracks || [];
@@ -85,12 +93,11 @@ export function AdminView() {
     } catch (err) {
       console.error("Admin track load failed:", err);
       isLoadingTracks = false;
-      // 🚨 Show the EXACT error message from the backend
       trackListWrap.innerHTML = `<p class="muted" style="color: var(--danger); padding: 16px; border: 1px solid var(--danger); border-radius: 8px;">❌ ${err.message}</p>`;
     }
   }
 
-    function renderTrackList() {
+  function renderTrackList() {
     trackListWrap.innerHTML = "";
 
     if (isLoadingTracks) {
@@ -98,16 +105,12 @@ export function AdminView() {
       return;
     }
 
-    // 🚨 FIXED SEARCH LOGIC
     const searchTerm = searchQuery.trim().toLowerCase();
     
     const filtered = allTracks.filter(t => {
-      if (!searchTerm) return true; // If search is empty, show all
-      
-      // Safely extract strings (fallback to empty string if missing)
+      if (!searchTerm) return true;
       const title = (t.title || "").toLowerCase();
       const artist = (t.artistId && t.artistId.name) ? t.artistId.name.toLowerCase() : "";
-      
       return title.includes(searchTerm) || artist.includes(searchTerm);
     });
 
@@ -116,7 +119,6 @@ export function AdminView() {
       return;
     }
 
-    // Build the list
     filtered.forEach((track) => {
       const fallbackImg = "https://picsum.photos/seed/" + track._id + "/100";
       const artistName = (track.artistId && track.artistId.name) ? track.artistId.name : "Unknown Artist";
@@ -150,12 +152,15 @@ export function AdminView() {
       const btn = form.querySelector('button[type="submit"]');
       btn.textContent = "Saving..."; btn.disabled = true;
       
+      // 🚨 EXTRACT ID IN EDIT MODAL TOO
+      const cleanYtId = extractYouTubeId(form.youtubeVideoId.value);
+
       try {
         await api.updateTrack(track._id, {
           title: form.title.value,
           artistName: form.artistName.value,
           genre: form.genre.value,
-          youtubeVideoId: form.youtubeVideoId.value,
+          youtubeVideoId: cleanYtId, 
           artworkUrl: form.artworkUrl.value
         });
         showToast("Track updated!");
@@ -175,7 +180,7 @@ export function AdminView() {
           )
         )
       ),
-      field("YouTube ID", h("input", { name: "youtubeVideoId", value: track.youtubeVideoId || "", class: "claim-input" })),
+      field("YouTube ID (or full link)", h("input", { name: "youtubeVideoId", value: track.youtubeVideoId || "", class: "claim-input" })),
       field("Artwork URL", h("input", { name: "artworkUrl", value: track.artworkUrl || "", class: "claim-input" })),
       h("div", { style: { display: "flex", gap: "8px", marginTop: "24px" } },
         h("button", { type: "button", class: "claim-secondary", onClick: closeModal, style: { marginTop: 0, flex: 1 } }, "Cancel"),
@@ -191,16 +196,23 @@ export function AdminView() {
     e.preventDefault();
     const btn = addFormDetails.querySelector('button[type="submit"]');
     btn.textContent = "Publishing..."; btn.disabled = true;
-    let rawYt = e.target.youtubeVideoId.value.trim();
-    let ytId = rawYt.includes("v=") ? rawYt.split("v=")[1].split("&")[0] : rawYt.split("youtu.be/")[1]?.split("?")[0] || rawYt;
+    
+    // 🚨 EXTRACT ID IN ADD FORM
+    const cleanYtId = extractYouTubeId(e.target.youtubeVideoId.value);
     
     try {
       await api.addTrack({
-        title: e.target.title.value, artistName: e.target.artistName.value,
-        albumName: e.target.albumName.value, youtubeVideoId: ytId,
-        genre: e.target.genre.value, artworkUrl: e.target.artworkUrl.value,
+        title: e.target.title.value, 
+        artistName: e.target.artistName.value,
+        albumName: e.target.albumName.value, 
+        youtubeVideoId: cleanYtId,
+        genre: e.target.genre.value, 
+        artworkUrl: e.target.artworkUrl.value,
       });
-      showToast("Track published!"); e.target.reset(); await syncCatalog(); loadTracks();
+      showToast("Track published!"); 
+      e.target.reset(); 
+      await syncCatalog(); 
+      loadTracks();
     } catch (err) { showToast("Failed to publish track"); } 
     finally { btn.textContent = "Publish Track"; btn.disabled = false; }
   }
