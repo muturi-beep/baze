@@ -416,8 +416,18 @@ export function showShareModal(track, onClose) {
   });
   
   var cleanUrl = window.location.origin + "/share/track/" + track.id + "?ref=vote";
-
   var shareText = `I just voted for "${track.title}" by ${track.artist?.name || "Unknown"} on Baze! Help them climb the chart by voting too:`;
+
+  // 🚨 FIX: Create a single close function that removes the DOM element
+  const closeModal = () => {
+    backdrop.remove();
+    if (onClose) onClose();
+  };
+
+  // Close if they click the dark background outside the modal
+  backdrop.addEventListener("click", function(e) {
+    if (e.target === backdrop) closeModal();
+  });
 
   var modal = h("div", { 
     class: "sheet", 
@@ -433,7 +443,7 @@ export function showShareModal(track, onClose) {
   },
     h("button", { 
       style: { position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: "var(--text-muted)", fontSize: "24px", cursor: "pointer" },
-      onClick: onClose
+      onClick: closeModal // 🚨 FIX: Call the new closeModal function
     }, "×"),
 
     h("div", { style: { fontSize: "40px", marginBottom: "16px" } }, "🚀"),
@@ -448,7 +458,7 @@ export function showShareModal(track, onClose) {
       onClick: function () {
         var waUrl = `https://wa.me/?text=${encodeURIComponent(shareText + " " + cleanUrl)}`;
         window.open(waUrl, "_blank");
-        onClose();
+        closeModal(); // 🚨 FIX: Close after sharing
       }
     }, "Share on WhatsApp"),
 
@@ -462,7 +472,7 @@ export function showShareModal(track, onClose) {
           navigator.clipboard.writeText(shareText + " " + cleanUrl);
           showToast("Link copied!");
         }
-        onClose();
+        closeModal(); // 🚨 FIX: Close after sharing
       }
     }, "Other Apps / Copy Link")
   );

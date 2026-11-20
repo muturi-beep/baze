@@ -7,6 +7,7 @@ import {
   getGenre,
   getAlbumBoard,
   getArtist,
+  getArtists, // 🚨 ADDED: Needed to fetch top artists
 } from "../store.js";
 import {
   cycleBanner,
@@ -31,6 +32,32 @@ export function HomeView() {
     return genre ? base + " · " + genre.name : base;
   }
 
+  // 🚨 NEW: Calculate Top 5 Artists based on votes
+  function getTopArtists(s) {
+    var board = getBoard(s.cycle.id);
+    var artistVotes = {};
+
+    board.forEach(function (e) {
+      if (e.track && e.track.artistId && e.votes > 0) {
+        var aid = e.track.artistId._id || e.track.artistId;
+        artistVotes[aid] = (artistVotes[aid] || 0) + e.votes;
+      }
+    });
+
+    var artists = getArtists();
+    return artists
+      .map(function (a) {
+        return { ...a, totalVotes: artistVotes[a._id] || 0 };
+      })
+      .filter(function (a) {
+        return a.totalVotes > 0; // Only show artists with votes
+      })
+      .sort(function (a, b) {
+        return b.totalVotes - a.totalVotes;
+      })
+      .slice(0, 5);
+  }
+
   function render() {
     var s = getState();
     var genre = currentGenreId ? getGenre(currentGenreId) : null;
@@ -48,6 +75,7 @@ export function HomeView() {
       })
       .slice(0, 4);
     var topAlbums = getAlbumBoard(s.cycle.id, currentGenreId).slice(0, 4);
+    var topArtists = getTopArtists(s); // 🚨 NEW
 
     el.innerHTML = "";
 
@@ -149,12 +177,33 @@ export function HomeView() {
       ),
     );
 
+    // 🚨 NEW: TOP ARTISTS SECTION
+    if (topArtists.length > 0) {
+      el.appendChild(
+        h("section", { style: { marginTop: "24px" } },
+          h("div", { class: "section-head" },
+            h("h2", {}, "Top Artists")
+          ),
+          h("div", { class: "trending-artist-row", style: { marginTop: "12px" } },
+            topArtists.map(function (a) {
+              var fallbackImg = "https://picsum.photos/seed/" + a._id + "/200";
+              return h("a", { href: "#/artist/" + a._id, class: "trending-artist-card" },
+                h("img", { src: a.imageUrl || fallbackImg, alt: "", onError: (e) => e.target.src = fallbackImg }),
+                h("span", { class: "artist-name" }, a.name),
+                h("span", { class: "artist-votes" }, a.totalVotes.toLocaleString() + " votes")
+              );
+            })
+          )
+        )
+      );
+    }
+
     // ---- Top albums ----
     if (topAlbums.length > 0) {
       el.appendChild(
         h(
           "section",
-          {},
+          { style: { marginTop: "24px" } },
           h(
             "div",
             { class: "section-head" },
@@ -181,7 +230,7 @@ export function HomeView() {
       el.appendChild(
         h(
           "section",
-          {},
+          { style: { marginTop: "24px" } },
           h("h2", {}, genre ? "More " + genre.name : "For you"),
           h(
             "div",
@@ -199,7 +248,7 @@ export function HomeView() {
       el.appendChild(
         h(
           "section",
-          {},
+          { style: { marginTop: "24px" } },
           h("h2", {}, "New this week"),
           h(
             "div",
