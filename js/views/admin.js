@@ -8,7 +8,6 @@ export function AdminView() {
   const s = getState();
   
   let allTracks = [];
-  let pendingClaims = [];
   let isLoadingTracks = true;
   let searchQuery = "";
 
@@ -26,58 +25,57 @@ export function AdminView() {
     )
   );
 
-  // 1. ADD TRACK FORM
-  const form = h("form", { class: "admin-form", onSubmit: handleAddSubmit, style: { marginBottom: "48px" } },
-    h("h2", { style: { fontSize: "18px", marginBottom: "16px" } }, "Add New Track"),
-    field("Song Title", h("input", { name: "title", required: true, class: "claim-input" })),
-    field("Artist Name", h("input", { name: "artistName", required: true, class: "claim-input" })),
-    field("Album Name (Optional)", h("input", { name: "albumName", class: "claim-input" })),
-    field("YouTube Link or ID", h("input", { name: "youtubeVideoId", required: true, class: "claim-input" })),
-    field("Genre", 
-      h("select", { name: "genre", required: true, class: "claim-input" },
-        h("option", { value: "afro-pop" }, "Afro-Pop"),
-        h("option", { value: "hip-hop" }, "Hip-Hop"),
-        h("option", { value: "gengetone" }, "Gengetone"),
-        h("option", { value: "rnb" }, "R&B"),
-        h("option", { value: "gospel" }, "Gospel"),
-        h("option", { value: "benga" }, "Benga")
-      )
-    ),
-    field("Artwork URL (Optional)", h("input", { name: "artworkUrl", class: "claim-input" })),
-    h("button", { type: "submit", class: "claim-primary", style: { marginTop: "24px" } }, "Publish Track")
+  // 1. ADD TRACK FORM (Collapsible)
+  const addFormDetails = h("details", { style: { background: "var(--bg-elev)", padding: "16px", borderRadius: "12px", marginBottom: "32px", border: "1px solid var(--border)" } },
+    h("summary", { style: { fontSize: "16px", fontWeight: "600", cursor: "pointer", outline: "none" } }, "➕ Add New Track"),
+    h("form", { class: "admin-form", onSubmit: handleAddSubmit, style: { marginTop: "16px" } },
+      field("Song Title", h("input", { name: "title", required: true, class: "claim-input" })),
+      field("Artist Name", h("input", { name: "artistName", required: true, class: "claim-input" })),
+      field("Album Name (Optional)", h("input", { name: "albumName", class: "claim-input" })),
+      field("YouTube Link or ID", h("input", { name: "youtubeVideoId", required: true, class: "claim-input" })),
+      field("Genre", 
+        h("select", { name: "genre", required: true, class: "claim-input" },
+          ["afro-pop", "hip-hop", "gengetone", "rnb", "gospel", "benga"].map(g => h("option", { value: g }, g.toUpperCase()))
+        )
+      ),
+      field("Artwork URL (Optional)", h("input", { name: "artworkUrl", class: "claim-input" })),
+      h("button", { type: "submit", class: "claim-primary", style: { marginTop: "16px" } }, "Publish Track")
+    )
   );
-  el.appendChild(form);
+  el.appendChild(addFormDetails);
 
-  // 2. PENDING CLAIMS
-  const claimsWrap = h("div", { style: { marginTop: "48px" } });
-  el.appendChild(claimsWrap);
-
-  // 3. MANAGE TRACKS (With Search)
-  const trackListWrap = h("div", { style: { marginTop: "48px" } });
-  el.appendChild(trackListWrap);
-
-  // Search Input
+  // 2. MANAGE TRACKS SECTION
   const searchInput = h("input", {
     type: "text",
     class: "claim-input",
-    placeholder: "Search tracks by title or artist...",
-    style: { marginBottom: "16px" },
-    onInput: (e) => {
-      searchQuery = e.target.value.toLowerCase();
-      renderTrackList();
-    }
+    placeholder: "🔍 Search tracks by title or artist...",
+    style: { marginBottom: "16px" }
+  });
+  
+  searchInput.addEventListener("input", (e) => {
+    searchQuery = e.target.value.toLowerCase();
+    renderTrackList();
   });
 
-  // 4. DANGER ZONE
+  const trackListWrap = h("div", { style: { display: "flex", flexDirection: "column", gap: "8px" } });
+
+  const manageSection = h("div", {},
+    h("h2", { style: { fontSize: "18px", marginBottom: "16px" } }, "Manage Tracks"),
+    searchInput,
+    trackListWrap
+  );
+  el.appendChild(manageSection);
+
+  // 3. DANGER ZONE
   el.appendChild(
-    h("div", { style: { marginTop: "64px", padding: "24px", border: "1px solid var(--danger)", borderRadius: "12px", background: "rgba(255, 92, 108, 0.05)" } },
+    h("div", { style: { marginTop: "48px", padding: "24px", border: "1px solid var(--danger)", borderRadius: "12px", background: "rgba(255, 92, 108, 0.05)" } },
       h("h3", { style: { color: "var(--danger)", marginTop: "0", marginBottom: "8px" } }, "⚠️ Danger Zone"),
       h("p", { class: "muted", style: { fontSize: "14px", marginBottom: "16px" } }, "Ending the week will freeze the current leaderboard, reset all votes, and start a new week."),
       h("button", { class: "claim-primary", style: { background: "var(--danger)", color: "#fff", marginTop: "0" }, onClick: handleResetCycle }, "End Week & Reset Votes")
     )
   );
 
-  // --- LOGIC: TRACKS ---
+  // --- LOGIC ---
   async function loadTracks() {
     try {
       const data = await api.getAdminTracks();
@@ -85,60 +83,67 @@ export function AdminView() {
       isLoadingTracks = false;
       renderTrackList();
     } catch (err) {
-      showToast("Failed to load tracks");
+      console.error("Admin track load failed:", err);
       isLoadingTracks = false;
-      renderTrackList();
+      trackListWrap.innerHTML = `<p class="muted" style="color: var(--danger)">Failed to load tracks. Are you logged in as the Admin? Check Vercel ADMIN_EMAIL.</p>`;
     }
   }
 
   function renderTrackList() {
     trackListWrap.innerHTML = "";
-    trackListWrap.appendChild(h("h2", { style: { fontSize: "18px", marginBottom: "16px" } }, "Manage Tracks"));
-    trackListWrap.appendChild(searchInput);
 
     if (isLoadingTracks) {
-      trackListWrap.appendChild(h("p", { class: "muted" }, "Loading tracks..."));
+      trackListWrap.appendChild(h("p", { class: "muted" }, "Loading your tracks..."));
       return;
     }
 
-    const filtered = allTracks.filter(t => 
-      t.title.toLowerCase().includes(searchQuery) || 
-      (t.artistId && t.artistId.name.toLowerCase().includes(searchQuery))
-    );
+    // Filter tracks based on the search query
+    const filtered = allTracks.filter(t => {
+      const titleMatch = t.title && t.title.toLowerCase().includes(searchQuery);
+      const artistName = t.artistId ? t.artistId.name : "";
+      const artistMatch = artistName.toLowerCase().includes(searchQuery);
+      return titleMatch || artistMatch;
+    });
 
     if (filtered.length === 0) {
       trackListWrap.appendChild(h("p", { class: "muted" }, "No tracks found."));
       return;
     }
 
-    const list = h("div", { style: { display: "flex", flexDirection: "column", gap: "8px", maxHeight: "500px", overflowY: "auto", paddingRight: "8px" } });
-
+    // Build a sleek list
     filtered.forEach((track) => {
-      list.appendChild(h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", background: "var(--bg-elev)", border: "1px solid var(--border)", borderRadius: "8px", gap: "12px" } },
-        h("div", { style: { flex: 1, overflow: "hidden" } },
-          h("div", { style: { fontWeight: "600", fontSize: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, track.title),
-          h("div", { style: { fontSize: "12px", color: "var(--text-muted)" } }, track.artistId ? track.artistId.name : "Unknown Artist")
-        ),
-        h("div", { style: { display: "flex", gap: "8px" } },
-          h("button", { style: { background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer" }, onClick: () => openEditModal(track) }, "Edit"),
-          h("button", { style: { background: "rgba(255,92,108,0.1)", border: "1px solid var(--danger)", color: "var(--danger)", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer" }, onClick: () => handleDelete(track) }, "Delete")
+      const fallbackImg = "https://picsum.photos/seed/" + track._id + "/100";
+      const artistName = track.artistId ? track.artistId.name : "Unknown Artist";
+
+      trackListWrap.appendChild(
+        h("div", { class: "admin-track-item" },
+          h("img", { src: track.artworkUrl || fallbackImg, alt: "", onError: (e) => e.target.src = fallbackImg }),
+          h("div", { class: "admin-track-info" },
+            h("div", { class: "title" }, track.title),
+            h("div", { class: "artist" }, artistName)
+          ),
+          h("div", { class: "admin-track-actions" },
+            h("button", { class: "admin-btn-small admin-btn-edit", onClick: () => openEditModal(track) }, "Edit"),
+            h("button", { class: "admin-btn-small admin-btn-delete", onClick: () => handleDelete(track) }, "Delete")
+          )
         )
-      ));
+      );
     });
-    trackListWrap.appendChild(list);
   }
 
   // --- EDIT MODAL ---
   function openEditModal(track) {
     const backdrop = h("div", { class: "sheet-backdrop", style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 100 } });
     const closeModal = () => backdrop.remove();
-    
     backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+
+    const artistName = track.artistId ? track.artistId.name : "";
 
     const form = h("form", { class: "sheet", style: { background: "var(--bg-elev)", borderRadius: "20px", padding: "24px", maxWidth: "400px", width: "100%" }, onSubmit: async (e) => {
       e.preventDefault();
       const btn = form.querySelector('button[type="submit"]');
       btn.textContent = "Saving..."; btn.disabled = true;
+      
       try {
         await api.updateTrack(track._id, {
           title: form.title.value,
@@ -151,11 +156,12 @@ export function AdminView() {
         await syncCatalog();
         closeModal();
         loadTracks();
-      } catch (err) { showToast("Failed to update track"); btn.textContent = "Save Changes"; btn.disabled = false; }
+      } catch (err) { showToast("Failed to update track"); } 
+      finally { btn.textContent = "Save Changes"; btn.disabled = false; }
     } },
       h("h2", { style: { margin: "0 0 16px" } }, "Edit Track"),
       field("Title", h("input", { name: "title", value: track.title, required: true, class: "claim-input" })),
-      field("Artist Name", h("input", { name: "artistName", value: track.artistId ? track.artistId.name : "", required: true, class: "claim-input" })),
+      field("Artist Name", h("input", { name: "artistName", value: artistName, required: true, class: "claim-input" })),
       field("Genre", 
         h("select", { name: "genre", class: "claim-input" },
           ["afro-pop", "hip-hop", "gengetone", "rnb", "gospel", "benga"].map(g => 
@@ -165,9 +171,9 @@ export function AdminView() {
       ),
       field("YouTube ID", h("input", { name: "youtubeVideoId", value: track.youtubeVideoId || "", class: "claim-input" })),
       field("Artwork URL", h("input", { name: "artworkUrl", value: track.artworkUrl || "", class: "claim-input" })),
-      h("div", { style: { display: "flex", gap: "8px", marginTop: "16px" } },
+      h("div", { style: { display: "flex", gap: "8px", marginTop: "24px" } },
         h("button", { type: "button", class: "claim-secondary", onClick: closeModal, style: { marginTop: 0, flex: 1 } }, "Cancel"),
-        h("button", { type: "submit", class: "claim-primary", style: { marginTop: 0, flex: 1 } }, "Save Changes")
+        h("button", { type: "submit", class: "claim-primary", style: { marginTop: 0, flex: 1 } }, "Save")
       )
     );
     backdrop.appendChild(form);
@@ -177,24 +183,24 @@ export function AdminView() {
   // --- ADD & DELETE & RESET LOGIC ---
   async function handleAddSubmit(e) {
     e.preventDefault();
-    const btn = form.querySelector('button[type="submit"]');
+    const btn = addFormDetails.querySelector('button[type="submit"]');
     btn.textContent = "Publishing..."; btn.disabled = true;
-    let rawYt = form.youtubeVideoId.value.trim();
+    let rawYt = e.target.youtubeVideoId.value.trim();
     let ytId = rawYt.includes("v=") ? rawYt.split("v=")[1].split("&")[0] : rawYt.split("youtu.be/")[1]?.split("?")[0] || rawYt;
     
     try {
       await api.addTrack({
-        title: form.title.value, artistName: form.artistName.value,
-        albumName: form.albumName.value, youtubeVideoId: ytId,
-        genre: form.genre.value, artworkUrl: form.artworkUrl.value,
+        title: e.target.title.value, artistName: e.target.artistName.value,
+        albumName: e.target.albumName.value, youtubeVideoId: ytId,
+        genre: e.target.genre.value, artworkUrl: e.target.artworkUrl.value,
       });
-      showToast("Track published!"); form.reset(); await syncCatalog(); loadTracks();
+      showToast("Track published!"); e.target.reset(); await syncCatalog(); loadTracks();
     } catch (err) { showToast("Failed to publish track"); } 
     finally { btn.textContent = "Publish Track"; btn.disabled = false; }
   }
 
   async function handleDelete(track) {
-    if (!confirm(`Delete "${track.title}"?`)) return;
+    if (!confirm(`Delete "${track.title}" permanently?`)) return;
     try { await api.deleteTrack(track._id); showToast("Deleted"); await syncCatalog(); loadTracks(); } catch (err) { showToast("Failed to delete"); }
   }
 
