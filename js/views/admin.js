@@ -52,8 +52,8 @@ export function AdminView() {
     style: { marginBottom: "16px" }
   });
   
-  searchInput.addEventListener("input", (e) => {
-    searchQuery = e.target.value.toLowerCase();
+    searchInput.addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim().toLowerCase(); // Added .trim()
     renderTrackList();
   });
 
@@ -89,7 +89,7 @@ export function AdminView() {
     }
   }
 
-  function renderTrackList() {
+    function renderTrackList() {
     trackListWrap.innerHTML = "";
 
     if (isLoadingTracks) {
@@ -97,23 +97,28 @@ export function AdminView() {
       return;
     }
 
-    // Filter tracks based on the search query
+    // 🚨 FIXED SEARCH LOGIC
+    const searchTerm = searchQuery.trim().toLowerCase();
+    
     const filtered = allTracks.filter(t => {
-      const titleMatch = t.title && t.title.toLowerCase().includes(searchQuery);
-      const artistName = t.artistId ? t.artistId.name : "";
-      const artistMatch = artistName.toLowerCase().includes(searchQuery);
-      return titleMatch || artistMatch;
+      if (!searchTerm) return true; // If search is empty, show all
+      
+      // Safely extract strings (fallback to empty string if missing)
+      const title = (t.title || "").toLowerCase();
+      const artist = (t.artistId && t.artistId.name) ? t.artistId.name.toLowerCase() : "";
+      
+      return title.includes(searchTerm) || artist.includes(searchTerm);
     });
 
     if (filtered.length === 0) {
-      trackListWrap.appendChild(h("p", { class: "muted" }, "No tracks found."));
+      trackListWrap.appendChild(h("p", { class: "muted" }, "No tracks found matching your search."));
       return;
     }
 
-    // Build a sleek list
+    // Build the list
     filtered.forEach((track) => {
       const fallbackImg = "https://picsum.photos/seed/" + track._id + "/100";
-      const artistName = track.artistId ? track.artistId.name : "Unknown Artist";
+      const artistName = (track.artistId && track.artistId.name) ? track.artistId.name : "Unknown Artist";
 
       trackListWrap.appendChild(
         h("div", { class: "admin-track-item" },
