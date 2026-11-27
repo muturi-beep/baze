@@ -1,7 +1,9 @@
 import confetti from "canvas-confetti";
 import { h } from "../dom.js";
-import { subscribe, getState, getTrack, getBoard, castVote } from "../store.js";
-import { voteButton, rankDelta, showToast, showShareModal } from "../components.js";
+// 🚨 FIX: Imported syncLeaderboard
+import { subscribe, getState, getTrack, getBoard, castVote, syncLeaderboard } from "../store.js";
+// 🚨 FIX: Imported showPaymentModal
+import { voteButton, rankDelta, showToast, showShareModal, showPaymentModal } from "../components.js";
 import { formatDuration, formatRemaining } from "../format.js";
 
 export function TrackView(params) {
@@ -46,7 +48,6 @@ export function TrackView(params) {
       ),
     );
 
-    // 1. The Image (use track.artworkUrl from DB)
     var fallbackImg = "https://picsum.photos/seed/" + track.id + "/400";
     var imageUrl = track.artworkUrl || fallbackImg;
 
@@ -57,16 +58,14 @@ export function TrackView(params) {
         class: "artwork",
         onError: function (e) {
           e.target.src = fallbackImg;
-        }, // Fallback if URL is broken
+        },
       }),
     );
 
-    // 2. Wrap all details
     var details = h("div", { class: "track-details" });
 
     details.appendChild(h("h1", { class: "track-title" }, track.title));
 
-    // Use real artist data
     details.appendChild(
       h(
         "p",
@@ -82,7 +81,6 @@ export function TrackView(params) {
       ),
     );
 
-    // Use real meta data
     var metaItems = [];
     if (track.album) {
       metaItems.push(
@@ -91,7 +89,6 @@ export function TrackView(params) {
     }
     if (track.releaseDate) metaItems.push(track.releaseDate.split("-")[0]);
 
-    // Format duration from ms to m:ss
     if (track.durationMs) {
       var mins = Math.floor(track.durationMs / 60000);
       var secs = Math.floor((track.durationMs % 60000) / 1000);
@@ -110,7 +107,6 @@ export function TrackView(params) {
       ),
     );
 
-    // --- YOUTUBE EMBED PLAYER (Hardened) ---
     if (track.youtubeVideoId) {
       const origin = window.location.origin;
       const embedUrl = `https://www.youtube.com/embed/${track.youtubeVideoId}?origin=${encodeURIComponent(origin)}&enablejsapi=1&rel=0`;
@@ -118,10 +114,7 @@ export function TrackView(params) {
       details.appendChild(
         h(
           "div",
-          {
-            class: "youtube-player",
-            style: { margin: "24px 0", borderRadius: "12px", overflow: "hidden" },
-          },
+          { class: "youtube-player", style: { margin: "24px 0", borderRadius: "12px", overflow: "hidden" } },
           h("iframe", {
             width: "100%",
             height: "200",
@@ -142,23 +135,14 @@ export function TrackView(params) {
             href: `https://www.youtube.com/watch?v=${track.youtubeVideoId}`,
             target: "_blank",
             rel: "noopener noreferrer",
-            style: {
-              display: "block",
-              textAlign: "center",
-              marginTop: "12px",
-              fontSize: "13px",
-              color: "var(--accent)",
-              textDecoration: "none",
-            },
+            style: { display: "block", textAlign: "center", marginTop: "12px", fontSize: "13px", color: "var(--accent)", textDecoration: "none" },
           },
           "If the player fails, watch directly on YouTube →",
         ),
       );
     }
 
-    // --- VOTE BUTTON LOGIC ---
-    var isOwnTrack =
-      s.user.claimedArtistId && s.user.claimedArtistId === track.artistId;
+    var isOwnTrack = s.user.claimedArtistId && s.user.claimedArtistId === track.artistId;
 
     if (isOwnTrack) {
       details.appendChild(
@@ -167,17 +151,7 @@ export function TrackView(params) {
           { class: "vote-wrap", style: { margin: "24px 0" } },
           h(
             "div",
-            {
-              class: "badge",
-              style: {
-                background: "var(--bg-elev)",
-                color: "var(--text-muted)",
-                border: "1px solid var(--border)",
-                padding: "12px",
-                display: "block",
-                textAlign: "center",
-              },
-            },
+            { class: "badge", style: { background: "var(--bg-elev)", color: "var(--text-muted)", border: "1px solid var(--border)", padding: "12px", display: "block", textAlign: "center" } },
             "🎤 You cannot vote for your own track",
           ),
         ),
@@ -193,7 +167,6 @@ export function TrackView(params) {
       );
     }
 
-    // --- RANK LINE ---
     var rankChildren = [
       "Rank ",
       h("strong", {}, "#" + (currentRank != null ? currentRank : "—")),
@@ -206,7 +179,6 @@ export function TrackView(params) {
       h("div", { class: "rank-line", "aria-live": "polite" }, rankChildren),
     );
 
-    // --- TAGS ---
     details.appendChild(
       h(
         "ul",
@@ -217,21 +189,12 @@ export function TrackView(params) {
       ),
     );
 
-    // --- ACTIONS ---
     details.appendChild(
       h(
         "div",
         { class: "actions" },
         h("button", { onClick: handleShare }, "Share"),
-        h(
-          "button",
-          {
-            onClick: () => {
-              location.hash = "#/report/" + track.id;
-            },
-          },
-          "Report",
-        ),
+        h("button", { onClick: () => { location.hash = "#/report/" + track.id; } }, "Report"),
       ),
     );
 
@@ -242,6 +205,15 @@ export function TrackView(params) {
     var s = getState();
     if (!s.user.verified) {
       location.hash = "#/login";
+      return;
+    }
+
+    // 🚨 NEW: Intercept the click if they are out of votes!
+    if (s.user.votesRemaining <= 0) {
+      showPaymentModal(s.user.id, async () => {
+        await syncLeaderboard(); // Refresh the local state from the DB
+        handleVote(); // Retry the vote automatically
+      });
       return;
     }
 
@@ -259,12 +231,11 @@ export function TrackView(params) {
         rankAfter = res.rank;
         render();
 
-        // 🎉 TRIGGER CONFETTI 🎉
         confetti({
           particleCount: 150,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ["#ff8a3d", "#3ddc84", "#f5f5f7"], // Baze colors
+          colors: ["#ff8a3d", "#3ddc84", "#f5f5f7"],
         });
 
         if (rankBefore != null) {
@@ -277,25 +248,32 @@ export function TrackView(params) {
           showToast(text);
         }
 
-        // 🚨 NEW: SHOW THE SHARE MODAL
         var track = getTrack(trackId);
         setTimeout(function() {
-          showShareModal(track, function() {
-            console.log("Share modal closed");
-          });
-        }, 800); // Wait 800ms so the confetti pops first!
+          showShareModal(track, function() {});
+        }, 800); 
 
       })
       .catch(function (err) {
-        if (err && err.code === "CANNOT_VOTE_FOR_SELF") {
+        // Fallback check just in case the backend rejects it
+        if (err && err.code === "NO_VOTES_LEFT") {
+          voteState = "idle";
+          render();
+          showPaymentModal(s.user.id, async () => {
+            await syncLeaderboard(); 
+            handleVote(); 
+          });
+        } else if (err && err.code === "CANNOT_VOTE_FOR_SELF") {
           showToast("You cannot vote for your own track");
           voteState = "idle";
+          render();
         } else if (err && err.code === "ALREADY_VOTED") {
           voteState = "voted";
+          render();
         } else {
           voteState = "error";
+          render();
         }
-        render();
       });
   }
 
@@ -304,9 +282,7 @@ export function TrackView(params) {
     var track = getTrack(trackId);
 
     if (navigator.share) {
-      navigator
-        .share({ url: url, title: track ? track.title : "Track" })
-        .catch(() => {});
+      navigator.share({ url: url, title: track ? track.title : "Track" }).catch(() => {});
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(url);
       showToast("Link copied");

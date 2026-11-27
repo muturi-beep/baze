@@ -1,5 +1,6 @@
 import { h } from "./dom.js";
 import { formatRemaining, cycleProgress } from "./format.js";
+import { api } from "./api.js"; // 🚨 CRITICAL FIX: Added this import for the payment modal
 
 export function rankDelta(prev, current) {
   if (prev == null) return h("span");
@@ -26,7 +27,11 @@ export function rankDelta(prev, current) {
 
 export function voteButton(opts) {
   var exhausted = opts.budgetUsed >= opts.budgetTotal;
-  var disabled = opts.state === "voted" || opts.state === "voting" || exhausted;
+  
+  // 🚨 FIX: Removed 'exhausted' from the disabled check. 
+  // They must be able to click it to open the payment modal!
+  var disabled = opts.state === "voted" || opts.state === "voting";
+  
   var label =
     opts.state === "voted"
       ? "✓ Voted"
@@ -35,8 +40,9 @@ export function voteButton(opts) {
         : opts.state === "error"
           ? "Try again"
           : exhausted
-            ? "No votes left"
+            ? "Buy Votes 🪙" // 🚨 Changed text
             : "♥ Vote";
+
   var btn = h(
     "button",
     {
@@ -418,13 +424,11 @@ export function showShareModal(track, onClose) {
   var cleanUrl = window.location.origin + "/share/track/" + track.id + "?ref=vote";
   var shareText = `I just voted for "${track.title}" by ${track.artist?.name || "Unknown"} on Baze! Help them climb the chart by voting too:`;
 
-  // 🚨 FIX: Create a single close function that removes the DOM element
   const closeModal = () => {
     backdrop.remove();
     if (onClose) onClose();
   };
 
-  // Close if they click the dark background outside the modal
   backdrop.addEventListener("click", function(e) {
     if (e.target === backdrop) closeModal();
   });
@@ -443,7 +447,7 @@ export function showShareModal(track, onClose) {
   },
     h("button", { 
       style: { position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: "var(--text-muted)", fontSize: "24px", cursor: "pointer" },
-      onClick: closeModal // 🚨 FIX: Call the new closeModal function
+      onClick: closeModal 
     }, "×"),
 
     h("div", { style: { fontSize: "40px", marginBottom: "16px" } }, "🚀"),
@@ -458,7 +462,7 @@ export function showShareModal(track, onClose) {
       onClick: function () {
         var waUrl = `https://wa.me/?text=${encodeURIComponent(shareText + " " + cleanUrl)}`;
         window.open(waUrl, "_blank");
-        closeModal(); // 🚨 FIX: Close after sharing
+        closeModal(); 
       }
     }, "Share on WhatsApp"),
 
@@ -472,9 +476,75 @@ export function showShareModal(track, onClose) {
           navigator.clipboard.writeText(shareText + " " + cleanUrl);
           showToast("Link copied!");
         }
-        closeModal(); // 🚨 FIX: Close after sharing
+        closeModal(); 
       }
     }, "Other Apps / Copy Link")
+  );
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}
+
+export function showPaymentModal(userId, onSuccess) {
+  const backdrop = h("div", { class: "sheet-backdrop", style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 100 } });
+  const closeModal = () => backdrop.remove();
+  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+
+  let isProcessing = false;
+
+  const phoneInput = h("input", { type: "tel", class: "claim-input", placeholder: "e.g. 0712345678", style: { marginBottom: "16px" } });
+  const statusText = h("p", { style: { fontSize: "13px", textAlign: "center", marginTop: "12px" } }, "");
+
+  const btn30 = h("button", { class: "claim-primary", onClick: () => handlePay(30) }, "Pay 30 KES (1 Vote)");
+  const btn75 = h("button", { class: "claim-primary", style: { background: "var(--accent)" }, onClick: () => handlePay(75) }, "Pay 75 KES (Weekly Pass)");
+
+  const handlePay = async (amount) => {
+    if (isProcessing) return;
+    if (!phoneInput.value.trim()) {
+      statusText.textContent = "Please enter your phone number.";
+      statusText.style.color = "var(--danger)";
+      return;
+    }
+
+    isProcessing = true;
+    btn30.disabled = true;
+    btn75.disabled = true;
+    statusText.textContent = "Sending STK Push...";
+    statusText.style.color = "var(--accent)";
+
+    try {
+      const res = await api.initiatePayment({ phoneNumber: phoneInput.value, amount, userId });
+      statusText.textContent = "Check your phone for the M-Pesa prompt...";
+      
+      const interval = setInterval(async () => {
+        const check = await api.verifyPayment(res.checkoutId);
+        if (check.status === "successful") {
+          clearInterval(interval);
+          statusText.textContent = "✅ Payment Successful!";
+          statusText.style.color = "var(--success)";
+          setTimeout(() => { closeModal(); onSuccess(); }, 1500);
+        } else if (check.status === "failed") {
+          clearInterval(interval);
+          statusText.textContent = "❌ Payment failed. Try again.";
+          statusText.style.color = "var(--danger)";
+          isProcessing = false; btn30.disabled = false; btn75.disabled = false;
+        }
+      }, 3000); 
+
+    } catch (err) {
+      statusText.textContent = "❌ Failed to initiate. Check number.";
+      statusText.style.color = "var(--danger)";
+      isProcessing = false; btn30.disabled = false; btn75.disabled = false;
+    }
+  };
+
+  const modal = h("div", { class: "sheet", style: { background: "var(--bg-elev)", borderRadius: "20px", padding: "24px", maxWidth: "400px", width: "100%", position: "relative" } },
+    h("button", { style: { position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: "var(--text-muted)", fontSize: "24px", cursor: "pointer" }, onClick: closeModal }, "×"),
+    h("h2", { style: { margin: "0 0 8px", textAlign: "center" } }, "Get Votes"),
+    h("p", { class: "muted", style: { textAlign: "center", fontSize: "13px", marginBottom: "20px" } }, "Choose how you want to vote this week."),
+    phoneInput,
+    h("div", { style: { display: "flex", flexDirection: "column", gap: "12px" } }, btn30, btn75),
+    statusText
   );
 
   backdrop.appendChild(modal);

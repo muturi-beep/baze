@@ -15,6 +15,7 @@ import adminRoutes from "./routes/admin.js";
 import reportRoutes from "./routes/reports.js";
 import shareRoutes from "./routes/share.js";
 import submissionRoutes from "./routes/submissions.js";
+import paymentRoutes from "./routes/payments.js";
 
 dotenv.config();
 
@@ -64,6 +65,7 @@ app.use("/v1/admin", adminRoutes);
 app.use("/v1/reports", reportRoutes);
 app.use("/share", shareRoutes);
 app.use("/v1/submissions", submissionRoutes);
+app.use("/v1/payments", paymentRoutes);
 
 app.get("/", (req, res) => res.json({ message: "Baze API is running." }));
 

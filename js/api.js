@@ -90,4 +90,8 @@ export const api = {
   getPendingSubmissions: () => request("/submissions/pending"),
   approveSubmission: (id) => 
     request(`/submissions/${id}/approve`, { method: "POST" }),
+
+    // Payments
+  initiatePayment: (data) => request("/payments/initiate", { method: "POST", body: JSON.stringify(data) }),
+  verifyPayment: (checkoutId) => request(`/payments/verify/${checkoutId}`),
 };
