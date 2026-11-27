@@ -30,15 +30,18 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: true, credentials: true }));
 
-let isConnected = false;
+// 🚨 BULLETPROOF SERVERLESS CONNECTION
 const connectDB = async () => {
-  if (isConnected) return;
-  if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is missing in Environment Variables");
+  if (mongoose.connection.readyState === 1) {
+    return; // Already connected
   }
+  
+  if (!process.env.MONGODB_URI) {
+    throw new Error("MONGODB_URI is missing in Vercel Environment Variables");
+  }
+
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    isConnected = true;
     console.log("✅ MongoDB Connected");
   } catch (err) {
     console.error("❌ MongoDB Error:", err.message);
@@ -51,6 +54,7 @@ app.use(async (req, res, next) => {
     await connectDB();
     next();
   } catch (err) {
+    // Return a readable JSON error instead of crashing the whole function
     res.status(500).json({ error: "Database connection failed: " + err.message });
   }
 });
