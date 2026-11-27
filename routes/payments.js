@@ -8,7 +8,7 @@ import Cycle from "../models/Cycle.js";
 dotenv.config();
 const router = express.Router();
 
-// 🚨 FIX: Only initialize M-Pesa if the keys are present
+// Only initialize M-Pesa if the keys are present
 let mobilePay = null;
 if (process.env.MPESA_PASSKEY && process.env.MPESA_CONSUMER_KEY) {
   try {
@@ -18,7 +18,7 @@ if (process.env.MPESA_PASSKEY && process.env.MPESA_CONSUMER_KEY) {
       passKey: process.env.MPESA_PASSKEY,
       shortcode: process.env.MPESA_SHORTCODE,
       callbackURL: process.env.MPESA_CALLBACK_URL,
-      mpesaBaseUrl: "DEV" // Use DEV for sandbox, PRODUCTION for live
+      mpesaBaseUrl: "DEV" // Use DEV for sandbox
     });
     console.log("✅ M-Pesa initialized successfully");
   } catch (err) {
@@ -30,7 +30,6 @@ if (process.env.MPESA_PASSKEY && process.env.MPESA_CONSUMER_KEY) {
 
 // 1. Initiate STK Push
 router.post("/initiate", async (req, res) => {
-  // 🚨 FIX: Prevent crash if mobilePay failed to initialize
   if (!mobilePay) {
     return res.status(503).json({ error: "M-Pesa is not configured on the server. Check Vercel Environment Variables." });
   }
@@ -41,11 +40,14 @@ router.post("/initiate", async (req, res) => {
     return res.status(400).json({ error: "Phone, amount, and userId are required." });
   }
 
-  // 🚨 FIX: Clean the phone number correctly for Safaricom (must start with 254)
+  // 🚨 FIXED: Correct Phone Formatting for daraja-package (Needs 9 digits, no 254, no 0)
   let cleanPhone = phoneNumber.replace(/\D/g, ''); // Remove any non-digits
-  if (cleanPhone.startsWith('0')) cleanPhone = cleanPhone.substring(1); // Remove leading 0
-  if (cleanPhone.startsWith('254')) cleanPhone = cleanPhone.substring(3); // Remove 254 temporarily
-  if (cleanPhone.length === 9) cleanPhone = '254' + cleanPhone; // Add 254 back (e.g., 254712345678)
+  
+  if (cleanPhone.startsWith('254')) {
+    cleanPhone = cleanPhone.substring(3); // 254712345678 -> 712345678
+  } else if (cleanPhone.startsWith('0')) {
+    cleanPhone = cleanPhone.substring(1); // 0712345678 -> 712345678
+  }
 
   try {
     // Create a pending payment record in the database
@@ -60,7 +62,7 @@ router.post("/initiate", async (req, res) => {
 
     // Initiate the STK push
     const result = await mobilePay.express({
-      phone: cleanPhone,
+      phone: cleanPhone, // This is now exactly 9 digits (e.g., 708374149)
       amount: amount.toString(),
       tillOrPayBillNumber: process.env.MPESA_SHORTCODE,
       account_reference: "BazeVote",
@@ -73,7 +75,7 @@ router.post("/initiate", async (req, res) => {
 
     res.json({ message: "STK Push initiated. Check your phone.", checkoutId: result.CheckoutRequestID });
   } catch (error) {
-    // 🚨 DEEP ERROR LOGGING
+    // DEEP ERROR LOGGING
     console.error("\n❌ --- SAFARICOM STK PUSH FAILED ---");
     console.error("Message:", error.message);
     if (error.response && error.response.data) {
@@ -87,7 +89,6 @@ router.post("/initiate", async (req, res) => {
 
 // 2. Handle the Callback from Safaricom
 router.post("/callback", express.json(), async (req, res) => {
-  // 🚨 FIX: Ensure the request body is valid so it doesn't crash
   if (!req.body || !req.body.Body || !req.body.Body.stkCallback) {
     return res.json({ ResultCode: 0, ResultDesc: "Invalid payload but acknowledged" });
   }
@@ -133,7 +134,7 @@ router.post("/callback", express.json(), async (req, res) => {
     console.error("Callback processing error:", err);
   }
 
-  // Acknowledge receipt to Safaricom (VERY IMPORTANT)
+  // Acknowledge receipt to Safaricom
   res.json({ ResultCode: 0, ResultDesc: "Callback received successfully" });
 });
 
@@ -143,7 +144,7 @@ router.get("/verify/:checkoutId", async (req, res) => {
     const payment = await Payment.findOne({ providerTransactionId: req.params.checkoutId });
     if (!payment) return res.status(404).json({ error: "Payment not found" });
     
-    res.json({ status: payment.status }); // "pending", "successful", or "failed"
+    res.json({ status: payment.status }); 
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
