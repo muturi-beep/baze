@@ -17,7 +17,7 @@ import { RankingExplainedView } from "./views/rankingExplained.js";
 import { AdminView } from "./views/admin.js";
 import { DashboardView } from "./views/dashboard.js";
 import { ReportView } from "./views/report.js";
-import { LoginView } from "./views/login.js"; 
+import { LoginView } from "./views/login.js";
 import { SubmitView } from "./views/submit.js";
 
 route("/", function () { return HomeView(); });
@@ -39,9 +39,9 @@ route("/report/:trackId", function (p) { return ReportView(p); });
 route("/login", function () { return LoginView(); });
 route("/submit", function () { return SubmitView(); });
 
-// Fetch data BEFORE starting the app
-checkAuth()
-  .catch((err) => console.error("Auth check bypassed:", err))
-  .finally(() => {
-    start(document.getElementById("app"));
-  });
+// 🚨 FIX: Render the app immediately!
+start(document.getElementById("app"));
+
+// 🚨 FIX: Fetch the data in the background. 
+// The views will update automatically when the data arrives.
+checkAuth().catch(err => console.error("Auth error:", err));

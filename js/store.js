@@ -176,21 +176,77 @@ export async function syncLeaderboard() {
 
 export async function checkAuth() {
   try {
-    const data = await api.getMe();
-    update({
-      user: {
+    // 🚨 FIX: Fire ALL requests to the backend at the same time!
+    const [userData, leaderboardData, catalogData] = await Promise.all([
+      api.getMe().catch(() => null), // If not logged in, return null
+      api.getLeaderboard().catch(() => null),
+      api.getCatalog().catch(() => null)
+    ]);
+
+    let patch = {};
+
+    // 1. Process User
+    if (userData) {
+      patch.user = {
         ...state.user,
-        id: data.user._id,
-        name: data.user.displayName,
+        id: userData.user._id,
+        name: userData.user.displayName,
         verified: true,
-        roles: data.user.roles,
-        votesRemaining: data.user.votesRemaining,
-      },
-    });
+        roles: userData.user.roles,
+        votesRemaining: userData.user.votesRemaining,
+      };
+    }
+
+    // 2. Process Catalog
+    if (catalogData) {
+      catalog.tracks = catalogData.tracks || [];
+      catalog.artists = catalogData.artists || [];
+      catalog.albums = catalogData.albums || [];
+
+      catalog.trackById = {};
+      catalog.artistById = {};
+      catalog.albumById = {};
+
+      catalog.tracks.forEach((t) => (catalog.trackById[t._id] = t));
+      catalog.artists.forEach((a) => (catalog.artistById[a._id] = a));
+      catalog.albums.forEach((al) => (catalog.albumById[al._id] = al));
+
+      // Build initial leaderboard with 0 votes
+      const board = catalog.tracks.map((t) => ({
+        trackId: t._id,
+        votes: 0,
+        previousRank: null,
+        rank: 0,
+        votedByMe: false,
+      }));
+      patch.leaderboard = { ...state.leaderboard, [CYCLE.id]: assignRanks(board) };
+    }
+
+    // 3. Process Leaderboard Votes
+    if (leaderboardData) {
+      if (leaderboardData.cycle) {
+        state.cycle.id = leaderboardData.cycle.id;
+        state.cycle.weekNumber = leaderboardData.cycle.weekNumber;
+        state.cycle.endsAt = leaderboardData.cycle.endsAt;
+      }
+
+      const currentBoard = patch.leaderboard?.[state.cycle.id] || state.leaderboard[state.cycle.id] || [];
+      const merged = currentBoard.map((e) => {
+        const dbVotes = (leaderboardData.counts && leaderboardData.counts[e.trackId]) || 0;
+        return Object.assign({}, e, {
+          votes: dbVotes,
+          votedByMe: leaderboardData.myVotes ? leaderboardData.myVotes.includes(e.trackId) : false,
+          previousRank: null,
+        });
+      });
+
+      patch.leaderboard = { ...state.leaderboard, ...patch.leaderboard, [state.cycle.id]: assignRanks(merged) };
+      patch.user = { ...state.user, ...patch.user, votesRemaining: leaderboardData.votesRemaining || 10 };
+    }
+
+    update(patch);
   } catch (err) {
-    console.log("Guest mode");
-  } finally {
-    await syncLeaderboard();
+    console.log("Guest mode or offline", err);
   }
 }
 

@@ -1,6 +1,6 @@
 import { h } from "./dom.js";
 import { formatRemaining, cycleProgress } from "./format.js";
-import { api } from "./api.js"; // 🚨 Needed for the payment modal
+import { api } from "./api.js"; 
 
 export function rankDelta(prev, current) {
   if (prev == null) return h("span");
@@ -21,7 +21,6 @@ export function rankDelta(prev, current) {
 export function voteButton(opts) {
   var exhausted = opts.budgetUsed >= opts.budgetTotal;
   
-  // 🚨 FIX: Removed 'exhausted' so the button is clickable to buy votes
   var disabled = opts.state === "voted" || opts.state === "voting";
   
   var label =
@@ -140,7 +139,13 @@ export function trackCard(track) {
   return h(
     "a",
     { class: "track-card", href: "#/track/" + trackId },
-    h("img", { src: track.artworkUrl || fallbackImg, alt: "", onError: function (e) { e.target.src = fallbackImg; } }),
+    // 🚨 ADDED loading: "lazy"
+    h("img", { 
+      src: track.artworkUrl || fallbackImg, 
+      alt: "", 
+      loading: "lazy", 
+      onError: function (e) { e.target.src = fallbackImg; } 
+    }),
     h("span", { class: "title" }, track.title),
     h("span", { class: "artist" }, track.artist?.name || "Unknown"),
   );
@@ -178,7 +183,13 @@ export function exploreCard(opts) {
   return h(
     "a",
     { class: "explore-card" + (opts.votedByMe ? " voted" : ""), href: "#/track/" + trackId },
-    h("img", { src: t.artworkUrl || fallbackImg, alt: "", onError: function (e) { e.target.src = fallbackImg; } }),
+    // 🚨 ADDED loading: "lazy"
+    h("img", { 
+      src: t.artworkUrl || fallbackImg, 
+      alt: "", 
+      loading: "lazy", 
+      onError: function (e) { e.target.src = fallbackImg; } 
+    }),
     h("span", { class: "title" }, t.title),
     h("span", { class: "artist" }, t.artist?.name || "Unknown"),
     h("span", { class: "meta" },
@@ -218,7 +229,13 @@ export function albumCard(opts) {
   return h(
     "a",
     { class: "album-card", href: "#/album/" + albId },
-    h("img", { src: alb.artworkUrl || fallbackImg, alt: "", onError: function (e) { e.target.src = fallbackImg; } }),
+    // 🚨 ADDED loading: "lazy"
+    h("img", { 
+      src: alb.artworkUrl || fallbackImg, 
+      alt: "", 
+      loading: "lazy", 
+      onError: function (e) { e.target.src = fallbackImg; } 
+    }),
     h("span", { class: "title" }, alb.title),
     h("span", { class: "artist" }, opts.artist ? opts.artist.name : ""),
     h("span", { class: "votes" }, opts.votes.toLocaleString() + " votes"),
