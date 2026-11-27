@@ -7,47 +7,50 @@ const router = express.Router();
 
 router.get("/", optionalAuth, async (req, res) => {
   try {
-    // Get the current active cycle dynamically
     let cycle = await Cycle.findOne({ status: "open" });
-    if (!cycle) {
-      // Fallback if no cycle exists yet
-      cycle = {
-        cycleId: "baze_wk12_kenya",
-        weekNumber: 12,
-        endsAt: new Date(Date.now() + 86400000),
-      };
+    
+    // 🚨 FIX: If there is no open cycle, OR the current cycle has expired, create a new one!
+    if (!cycle || new Date() > new Date(cycle.endsAt)) {
+      if (cycle) {
+        cycle.status = "closed";
+        await cycle.save();
+      }
+      
+      const nextWeek = cycle ? cycle.weekNumber + 1 : 1;
+      cycle = await Cycle.create({
+        cycleId: `baze_wk${nextWeek}_kenya`,
+        weekNumber: nextWeek,
+        status: "open",
+        startsAt: new Date(),
+        endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      });
     }
 
     const voteAggregation = await Vote.aggregate([
       { $match: { cycleId: cycle.cycleId } },
-      { $group: { _id: "$trackId", totalVotes: { $sum: 1 } } },
+      { $group: { _id: "$trackId", totalVotes: { $sum: 1 } } }
     ]);
 
     const counts = {};
-    voteAggregation.forEach((item) => {
-      counts[item._id] = item.totalVotes;
-    });
+    voteAggregation.forEach((item) => { counts[item._id] = item.totalVotes; });
 
     let myVotes = [];
     let votesRemaining = 10;
     if (req.user) {
-      const userVotes = await Vote.find({
-        voterId: req.user._id,
-        cycleId: cycle.cycleId,
-      }).select("trackId");
-      myVotes = userVotes.map((v) => v.trackId);
+      const userVotes = await Vote.find({ voterId: req.user._id, cycleId: cycle.cycleId }).select("trackId");
+      myVotes = userVotes.map(v => v.trackId);
       votesRemaining = req.user.votesRemaining;
     }
 
-    res.json({
-      counts,
-      myVotes,
+    res.json({ 
+      counts, 
+      myVotes, 
       votesRemaining,
       cycle: {
         id: cycle.cycleId,
         weekNumber: cycle.weekNumber,
-        endsAt: cycle.endsAt,
-      },
+        endsAt: cycle.endsAt
+      }
     });
   } catch (err) {
     console.error("Leaderboard error:", err);

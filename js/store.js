@@ -98,7 +98,6 @@ function buildEmptyLeaderboard() {
     rank: 0,
     votedByMe: false,
   }));
-  // Use state.cycle.id instead of hardcoded CYCLE.id
   state.leaderboard[state.cycle.id] = assignRanks(board);
   update({ leaderboard: state.leaderboard });
 }
@@ -134,7 +133,7 @@ export async function syncLeaderboard() {
     try {
       data = await api.getLeaderboard();
 
-      // 1. Update the local state cycle with the real dates from the database!
+      // Update the local state cycle with the real dates from the database!
       if (data.cycle) {
         state.cycle.id = data.cycle.id;
         state.cycle.weekNumber = data.cycle.weekNumber;
@@ -144,7 +143,6 @@ export async function syncLeaderboard() {
       console.error("⚠️ Vote count failed, showing tracks with 0 votes", err);
     }
 
-    // 2. Ensure we have a board for the CURRENT active cycle
     if (
       !state.leaderboard[state.cycle.id] ||
       state.leaderboard[state.cycle.id].length === 0
@@ -176,30 +174,29 @@ export async function syncLeaderboard() {
 
 export async function checkAuth() {
   try {
-    // 🚨 FIX: Fire ALL requests to the backend at the same time!
+    // 🚨 Retry mechanism for cold starts
+    const fetchWithRetry = async (fn, retries = 2) => {
+      try { return await fn(); } 
+      catch (e) { 
+        if (retries > 0) { await new Promise(r => setTimeout(r, 1000)); return fetchWithRetry(fn, retries - 1); }
+        return null; 
+      }
+    };
+
     const [userData, leaderboardData, catalogData] = await Promise.all([
-      api.getMe().catch(() => null), // If not logged in, return null
-      api.getLeaderboard().catch(() => null),
-      api.getCatalog().catch(() => null)
+      fetchWithRetry(() => api.getMe()),
+      fetchWithRetry(() => api.getLeaderboard()),
+      fetchWithRetry(() => api.getCatalog())
     ]);
 
     let patch = {};
 
-    // 1. Process User
     if (userData) {
-      patch.user = {
-        ...state.user,
-        id: userData.user._id,
-        name: userData.user.displayName,
-        verified: true,
-        roles: userData.user.roles,
-        votesRemaining: userData.user.votesRemaining,
-      };
+      patch.user = { ...state.user, id: userData.user._id, name: userData.user.displayName, verified: true, roles: userData.user.roles, votesRemaining: userData.user.votesRemaining };
     }
 
-    // 2. Process Catalog
-    if (catalogData) {
-      catalog.tracks = catalogData.tracks || [];
+    if (catalogData && catalogData.tracks) {
+      catalog.tracks = catalogData.tracks;
       catalog.artists = catalogData.artists || [];
       catalog.albums = catalogData.albums || [];
 
@@ -211,24 +208,17 @@ export async function checkAuth() {
       catalog.artists.forEach((a) => (catalog.artistById[a._id] = a));
       catalog.albums.forEach((al) => (catalog.albumById[al._id] = al));
 
-      // Build initial leaderboard with 0 votes
-      const board = catalog.tracks.map((t) => ({
-        trackId: t._id,
-        votes: 0,
-        previousRank: null,
-        rank: 0,
-        votedByMe: false,
-      }));
-      patch.leaderboard = { ...state.leaderboard, [CYCLE.id]: assignRanks(board) };
+      const board = catalog.tracks.map((t) => ({ trackId: t._id, votes: 0, previousRank: null, rank: 0, votedByMe: false }));
+      // Fixed: Use state.cycle.id so it dynamically uses the correct cycle
+      patch.leaderboard = { ...state.leaderboard, [state.cycle.id]: assignRanks(board) };
+    } else {
+      console.error("❌ Catalog failed to load or is empty.");
     }
 
-    // 3. Process Leaderboard Votes
-    if (leaderboardData) {
-      if (leaderboardData.cycle) {
-        state.cycle.id = leaderboardData.cycle.id;
-        state.cycle.weekNumber = leaderboardData.cycle.weekNumber;
-        state.cycle.endsAt = leaderboardData.cycle.endsAt;
-      }
+    if (leaderboardData && leaderboardData.cycle) {
+      state.cycle.id = leaderboardData.cycle.id;
+      state.cycle.weekNumber = leaderboardData.cycle.weekNumber;
+      state.cycle.endsAt = leaderboardData.cycle.endsAt;
 
       const currentBoard = patch.leaderboard?.[state.cycle.id] || state.leaderboard[state.cycle.id] || [];
       const merged = currentBoard.map((e) => {
