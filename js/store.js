@@ -191,10 +191,19 @@ export async function checkAuth() {
 
     let patch = {};
 
+    // 1. Process User
     if (userData) {
       patch.user = { ...state.user, id: userData.user._id, name: userData.user.displayName, verified: true, roles: userData.user.roles, votesRemaining: userData.user.votesRemaining };
     }
 
+    // 2. Process Cycle FIRST (So we know the correct ID to attach tracks to)
+    if (leaderboardData && leaderboardData.cycle) {
+      state.cycle.id = leaderboardData.cycle.id;
+      state.cycle.weekNumber = leaderboardData.cycle.weekNumber;
+      state.cycle.endsAt = leaderboardData.cycle.endsAt;
+    }
+
+    // 3. Process Catalog
     if (catalogData && catalogData.tracks) {
       catalog.tracks = catalogData.tracks;
       catalog.artists = catalogData.artists || [];
@@ -209,17 +218,14 @@ export async function checkAuth() {
       catalog.albums.forEach((al) => (catalog.albumById[al._id] = al));
 
       const board = catalog.tracks.map((t) => ({ trackId: t._id, votes: 0, previousRank: null, rank: 0, votedByMe: false }));
-      // Fixed: Use state.cycle.id so it dynamically uses the correct cycle
+      // Use the NEW state.cycle.id
       patch.leaderboard = { ...state.leaderboard, [state.cycle.id]: assignRanks(board) };
     } else {
       console.error("❌ Catalog failed to load or is empty.");
     }
 
-    if (leaderboardData && leaderboardData.cycle) {
-      state.cycle.id = leaderboardData.cycle.id;
-      state.cycle.weekNumber = leaderboardData.cycle.weekNumber;
-      state.cycle.endsAt = leaderboardData.cycle.endsAt;
-
+    // 4. Process Votes
+    if (leaderboardData) {
       const currentBoard = patch.leaderboard?.[state.cycle.id] || state.leaderboard[state.cycle.id] || [];
       const merged = currentBoard.map((e) => {
         const dbVotes = (leaderboardData.counts && leaderboardData.counts[e.trackId]) || 0;

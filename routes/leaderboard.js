@@ -7,9 +7,10 @@ const router = express.Router();
 
 router.get("/", optionalAuth, async (req, res) => {
   try {
+    // 1. Get current open cycle
     let cycle = await Cycle.findOne({ status: "open" });
     
-    // 🚨 FIX: If there is no open cycle, OR the current cycle has expired, create a new one!
+    // 🚨 FIX: If no open cycle, OR it has expired, create a brand new one!
     if (!cycle || new Date() > new Date(cycle.endsAt)) {
       if (cycle) {
         cycle.status = "closed";
@@ -24,6 +25,7 @@ router.get("/", optionalAuth, async (req, res) => {
         startsAt: new Date(),
         endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       });
+      console.log(`🚀 Auto-started new cycle: ${cycle.cycleId}`);
     }
 
     const voteAggregation = await Vote.aggregate([
