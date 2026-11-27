@@ -311,8 +311,10 @@ export function showPaymentModal(userId, onSuccess) {
           isProcessing = false; btn30.disabled = false; btn75.disabled = false; 
         }
       }, 3000); 
-    } catch (err) {
-      statusText.textContent = "❌ Failed to initiate. Check number."; statusText.style.color = "var(--danger)"; 
+        } catch (err) {
+      // 🚨 Show the EXACT error from the backend
+      statusText.textContent = "❌ " + (err.message || "Failed to initiate. Check backend logs.");
+      statusText.style.color = "var(--danger)"; 
       isProcessing = false; btn30.disabled = false; btn75.disabled = false;
     }
   };
