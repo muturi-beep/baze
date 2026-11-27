@@ -8,33 +8,44 @@ import Cycle from "../models/Cycle.js";
 dotenv.config();
 const router = express.Router();
 
-// Initialize the Safaricom Daraja SDK
-const mobilePay = mpesa({
-  consumerSecret: process.env.MPESA_CONSUMER_SECRET,
-  consumerKey: process.env.MPESA_CONSUMER_KEY,
-  passKey: process.env.MPESA_PASSKEY,
-  shortcode: process.env.MPESA_SHORTCODE,
-  callbackURL: process.env.MPESA_CALLBACK_URL,
-  mpesaBaseUrl: "DEV" // DEV for sandbox
-});
+// 🚨 FIX: Only initialize M-Pesa if the keys are present
+let mobilePay = null;
+if (process.env.MPESA_PASSKEY && process.env.MPESA_CONSUMER_KEY) {
+  try {
+    mobilePay = mpesa({
+      consumerSecret: process.env.MPESA_CONSUMER_SECRET,
+      consumerKey: process.env.MPESA_CONSUMER_KEY,
+      passKey: process.env.MPESA_PASSKEY,
+      shortcode: process.env.MPESA_SHORTCODE,
+      callbackURL: process.env.MPESA_CALLBACK_URL,
+      mpesaBaseUrl: "DEV" // Use DEV for sandbox, PRODUCTION for live
+    });
+    console.log("✅ M-Pesa initialized successfully");
+  } catch (err) {
+    console.error("❌ M-Pesa Initialization Error:", err.message);
+  }
+} else {
+  console.warn("⚠️ M-Pesa keys are missing. Payments will be disabled.");
+}
 
 // 1. Initiate STK Push
 router.post("/initiate", async (req, res) => {
+  // 🚨 FIX: Prevent crash if mobilePay failed to initialize
+  if (!mobilePay) {
+    return res.status(503).json({ error: "M-Pesa is not configured on the server. Check Vercel Environment Variables." });
+  }
+
   let { phoneNumber, amount, userId } = req.body;
 
   if (!phoneNumber || !amount || !userId) {
     return res.status(400).json({ error: "Phone, amount, and userId are required." });
   }
 
-  // 🚨 Safaricom requires numbers to start with 254 (no +, no leading 0)
-   if (phoneNumber.startsWith("+")) {
-    phoneNumber = phoneNumber.slice(1); // Remove +
-  }
-  if (phoneNumber.startsWith("254")) {
-    phoneNumber = phoneNumber.slice(3); // Remove 254
-  } else if (phoneNumber.startsWith("0")) {
-    phoneNumber = phoneNumber.slice(1); // Remove leading 0
-  }
+  // 🚨 FIX: Clean the phone number correctly for Safaricom (must start with 254)
+  let cleanPhone = phoneNumber.replace(/\D/g, ''); // Remove any non-digits
+  if (cleanPhone.startsWith('0')) cleanPhone = cleanPhone.substring(1); // Remove leading 0
+  if (cleanPhone.startsWith('254')) cleanPhone = cleanPhone.substring(3); // Remove 254 temporarily
+  if (cleanPhone.length === 9) cleanPhone = '254' + cleanPhone; // Add 254 back (e.g., 254712345678)
 
   try {
     // Create a pending payment record in the database
@@ -49,7 +60,7 @@ router.post("/initiate", async (req, res) => {
 
     // Initiate the STK push
     const result = await mobilePay.express({
-      phone: phoneNumber,
+      phone: cleanPhone,
       amount: amount.toString(),
       tillOrPayBillNumber: process.env.MPESA_SHORTCODE,
       account_reference: "BazeVote",
@@ -76,6 +87,11 @@ router.post("/initiate", async (req, res) => {
 
 // 2. Handle the Callback from Safaricom
 router.post("/callback", express.json(), async (req, res) => {
+  // 🚨 FIX: Ensure the request body is valid so it doesn't crash
+  if (!req.body || !req.body.Body || !req.body.Body.stkCallback) {
+    return res.json({ ResultCode: 0, ResultDesc: "Invalid payload but acknowledged" });
+  }
+
   const callbackData = req.body.Body.stkCallback;
   console.log("M-Pesa Callback Received:", callbackData);
 
@@ -101,7 +117,9 @@ router.post("/callback", express.json(), async (req, res) => {
           user.votesRemaining += 1;
         } else if (payment.method === "weekly_pass") {
           const currentCycle = await Cycle.findOne({ status: "open" });
-          user.weeklyPassCycleId = currentCycle.cycleId;
+          if (currentCycle) {
+            user.weeklyPassCycleId = currentCycle.cycleId;
+          }
         }
         await user.save();
         console.log(`🎉 Votes granted to ${user.email}`);
